@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">メニュー</string>
     <string name="settings">設定</string>
@@ -148,6 +148,12 @@
     <string name="key_music">音楽</string>
     <string name="key_nav">ナビゲーション</string>
     <string name="key_night">ナイトモードの切り替え</string>
+    <string name="key_enter">エンター</string>
+    <string name="key_home">ホーム</string>
+    <string name="key_app_switch">履歴</string>
+    <string name="key_button_a">Aボタン (選択)</string>
+    <string name="key_button_b">Bボタン (戻る)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">アプリ言語</string>
@@ -162,6 +168,14 @@
     <string name="usb_auto_connect_description">アプリケーションが開始された時に既知のUSBデバイスに接続されると自動的に接続します。</string>
     <string name="auto_start_bt_label">Bluetooth自動開始</string>
     <string name="auto_start_bt_description">特定のBluetoothデバイスが接続されたときに、Headunit Revivedを自動的に起動します。</string>
+    <string name="auto_start_wifi_label">Wi-Fi自動起動</string>
+    <string name="auto_start_wifi_description">特定のWi-Fi SSIDに接続されたときにHeadunit Revivedを自動的に起動します。</string>
+    <string name="auto_start_wifi_ssid_label">Wi-Fi SSID</string>
+    <string name="auto_start_wifi_ssid_description">このWi-Fi SSIDに接続されている場合のみ接続を試みます</string>
+    <string name="auto_start_wifi_warning">レガシー機能：バックグラウンド制限のため、Android 8以降では動作が不安定になる場合があります。アプリをバッテリー最適化から除外してください。</string>
+    <string name="enter_wifi_ssid">Wi-Fi SSIDを入力してください</string>
+    <string name="wifi_ssid_not_set">未設定</string>
+
     <string name="listen_for_usb_devices_label">USBデバイスへの反応</string>
     <string name="listen_for_usb_devices_description">USBデバイスが接続されたときにAndroidのシステムプロンプトを表示します。</string>
     <string name="auto_start_usb_label">USBから自動起動</string>

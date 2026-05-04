@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">Menu</string>
     <string name="settings">Configurações</string>
@@ -132,6 +132,12 @@
     <string name="key_music">Música</string>
     <string name="key_nav">Navegação</string>
     <string name="key_night">Alternar Modo Noturno</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_home">Home</string>
+    <string name="key_app_switch">Aplicativos recentes</string>
+    <string name="key_button_a">Botão A (Selecionar)</string>
+    <string name="key_button_b">Botão B (Voltar)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">Idioma do aplicativo</string>
@@ -146,6 +152,14 @@
     <string name="usb_auto_connect_description">Conecta-se automaticamente a um dispositivo USB conhecido assim que o aplicativo é aberto.</string>
     <string name="auto_start_bt_label">Início automático por Bluetooth</string>
     <string name="auto_start_bt_description">Abrir automaticamente o Headunit Revived quando um dispositivo Bluetooth específico se conectar.</string>
+    <string name="auto_start_wifi_label">Início automático por Wi-Fi</string>
+    <string name="auto_start_wifi_description">Abre o Headunit Revived automaticamente quando conectado a um SSID Wi-Fi específico.</string>
+    <string name="auto_start_wifi_ssid_label">SSID Wi-Fi</string>
+    <string name="auto_start_wifi_ssid_description">Conectar apenas se estiver associado a este SSID Wi-Fi</string>
+    <string name="auto_start_wifi_warning">Recurso legacy: Pode não funcionar de forma confiável no Android 8+ devido a restrições em segundo plano. Certifique-se de que o app esteja excluído da otimização de bateria.</string>
+    <string name="enter_wifi_ssid">Digite o SSID Wi-Fi</string>
+    <string name="wifi_ssid_not_set">Não definido</string>
+
     <string name="listen_for_usb_devices_label">Ouvir dispositivos USB</string>
     <string name="listen_for_usb_devices_description">Mostrar o aviso do sistema Android quando um dispositivo USB for conectado.</string>
     <string name="auto_start_usb_label">Início automático por USB</string>

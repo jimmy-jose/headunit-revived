@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">Menu</string>
     <string name="settings">Instellingen</string>
@@ -131,6 +131,12 @@
     <string name="key_music">Muziek</string>
     <string name="key_nav">Navigatie</string>
     <string name="key_night">Schakel Nachtmodus</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_home">Home</string>
+    <string name="key_app_switch">Recente apps</string>
+    <string name="key_button_a">Knop A (Selecteren)</string>
+    <string name="key_button_b">Knop B (Terug)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">App-taal</string>
@@ -145,6 +151,14 @@
     <string name="usb_auto_connect_description">Automatisch verbinden met een bekend USB-apparaat wanneer de applicatie wordt geopend.</string>
     <string name="auto_start_bt_label">Automatisch starten bij Bluetooth</string>
     <string name="auto_start_bt_description">Start Headunit Revived automatisch wanneer een specifiek Bluetooth-apparaat verbinding maakt.</string>
+    <string name="auto_start_wifi_label">Automatisch starten bij WiFi</string>
+    <string name="auto_start_wifi_description">Opent Headunit Revived automatisch bij verbinding met een specifieke WiFi-SSID.</string>
+    <string name="auto_start_wifi_ssid_label">WiFi-SSID</string>
+    <string name="auto_start_wifi_ssid_description">Alleen verbinden bij verbinding met deze WiFi-SSID</string>
+    <string name="auto_start_wifi_warning">Legacy-functie: Dit werkt mogelijk niet betrouwbaar op Android 8+ vanwege achtergrondbeperkingen. Zorg ervoor dat de app is uitgesloten van batterijoptimalisatie.</string>
+    <string name="enter_wifi_ssid">WiFi-SSID invoeren</string>
+    <string name="wifi_ssid_not_set">Niet ingesteld</string>
+
     <string name="listen_for_usb_devices_label">Luister naar USB-apparaten</string>
     <string name="listen_for_usb_devices_description">Toon de Android-systeemprompt wanneer een USB-apparaat wordt aangesloten.</string>
     <string name="auto_start_usb_label">Automatisch starten via USB</string>

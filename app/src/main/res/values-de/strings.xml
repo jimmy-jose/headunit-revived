@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">Menü</string>
     <string name="settings">Einstellungen</string>
@@ -148,6 +148,12 @@
     <string name="key_music">Musik</string>
     <string name="key_nav">Navigation</string>
     <string name="key_night">Nachtmodus umschalten</string>
+    <string name="key_enter">Eingabe</string>
+    <string name="key_home">Home</string>
+    <string name="key_app_switch">App-Wechsel / Verlauf</string>
+    <string name="key_button_a">Taste A (Auswählen)</string>
+    <string name="key_button_b">Taste B (Zurück)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">App-Sprache</string>
@@ -162,6 +168,14 @@
     <string name="usb_auto_connect_description">Verbindet sich automatisch mit einem bekannten USB-Gerät, sobald die App geöffnet wird.</string>
     <string name="auto_start_bt_label">Auto-Start bei Bluetooth</string>
     <string name="auto_start_bt_description">Startet Headunit Revived automatisch, wenn sich ein bestimmtes Bluetooth-Gerät verbindet.</string>
+    <string name="auto_start_wifi_label">Auto-Start bei WLAN</string>
+    <string name="auto_start_wifi_description">Öffnet Headunit Revived automatisch, wenn eine Verbindung zu einer bestimmten WLAN-SSID besteht.</string>
+    <string name="auto_start_wifi_ssid_label">WLAN-SSID</string>
+    <string name="auto_start_wifi_ssid_description">Nur verbinden, wenn mit dieser WLAN-SSID gekoppelt</string>
+    <string name="auto_start_wifi_warning">Legacy-Funktion: Dies funktioniert unter Android 8+ aufgrund von Hintergrundbeschränkungen möglicherweise nicht zuverlässig. Stellen Sie sicher, dass die App von der Akku-Optimierung ausgeschlossen ist.</string>
+    <string name="enter_wifi_ssid">WLAN-SSID eingeben</string>
+    <string name="wifi_ssid_not_set">Nicht festgelegt</string>
+
     <string name="listen_for_usb_devices_label">USB System Anbindung</string>
     <string name="listen_for_usb_devices_description">Zeigt den Systemdialog, wenn ein USB-Gerät angeschlossen wird.</string>
     <string name="auto_start_usb_label">Autostart bei USB</string>

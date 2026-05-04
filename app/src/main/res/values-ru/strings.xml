@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">Меню</string>
     <string name="settings">Настройки</string>
@@ -132,6 +132,12 @@
     <string name="key_music">Музыка</string>
     <string name="key_nav">Навигация</string>
     <string name="key_night">Переключить ночной режим</string>
+    <string name="key_enter">Ввод (Enter)</string>
+    <string name="key_home">Домой (Home)</string>
+    <string name="key_app_switch">Недавние приложения</string>
+    <string name="key_button_a">Кнопка A (Выбрать)</string>
+    <string name="key_button_b">Кнопка B (Назад)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">Язык приложения</string>
@@ -146,6 +152,14 @@
     <string name="usb_auto_connect_description">Автоматически подключаться к известному USB-устройству при запуске приложения.</string>
     <string name="auto_start_bt_label">Автозапуск при Bluetooth</string>
     <string name="auto_start_bt_description">Автоматически открывать Headunit Revived при подключении определенного Bluetooth-устройства.</string>
+    <string name="auto_start_wifi_label">Автозапуск при WiFi</string>
+    <string name="auto_start_wifi_description">Автоматически открывать Headunit Revived при подключении к определенной WiFi-сети (SSID).</string>
+    <string name="auto_start_wifi_ssid_label">SSID WiFi</string>
+    <string name="auto_start_wifi_ssid_description">Подключаться только при сопряжении with этой WiFi-сетью (SSID)</string>
+    <string name="auto_start_wifi_warning">Устаревшая функция: может работать нестабильно на Android 8+ из-за фоновых ограничений. Убедитесь, что приложение исключено из оптимизации батареи.</string>
+    <string name="enter_wifi_ssid">Введите SSID WiFi</string>
+    <string name="wifi_ssid_not_set">Не задано</string>
+
     <string name="listen_for_usb_devices_label">Реагировать на USB-устройства</string>
     <string name="listen_for_usb_devices_description">Показывать системное окно Android при подключении USB-устройства.</string>
     <string name="auto_start_usb_label">Автозапуск при USB</string>

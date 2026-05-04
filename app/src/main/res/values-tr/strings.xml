@@ -149,6 +149,12 @@
     <string name="key_music">Müzik</string>
     <string name="key_nav">Navigasyon</string>
     <string name="key_night">Gece Moduna Geç</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_home">Ana Ekran</string>
+    <string name="key_app_switch">Son Uygulamalar</string>
+    <string name="key_button_a">A Butonu (Seç)</string>
+    <string name="key_button_b">B Butonu (Geri)</string>
+
 
     <string name="app_language">Uygulama Dili</string>
     <string name="system_default">Sistem Varsayılanı</string>
@@ -161,6 +167,14 @@
     <string name="usb_auto_connect_description">Uygulama açıldığında bilinen bir USB cihazına otomatik olarak bağlan.</string>
     <string name="auto_start_bt_label">Bluetooth ile otomatik başlat</string>
     <string name="auto_start_bt_description">Belirli bir Bluetooth cihazı bağlandığında Headunit Revived\'ı otomatik olarak aç.</string>
+    <string name="auto_start_wifi_label">WiFi ile otomatik başlat</string>
+    <string name="auto_start_wifi_description">Belirli bir WiFi SSID\'sine bağlandığında Headunit Revived\'ı otomatik olarak aç.</string>
+    <string name="auto_start_wifi_ssid_label">WiFi SSID</string>
+    <string name="auto_start_wifi_ssid_description">Sadece bu WiFi SSID\'sine bağlandığında bağlan</string>
+    <string name="auto_start_wifi_warning">Eski özellik: Arka plan kısıtlamaları nedeniyle Android 8+ sürümlerinde güvenilir şekilde çalışmayabilir. Uygulamanın pil optimizasyonundan muaf tutulduğundan emin olun.</string>
+    <string name="enter_wifi_ssid">WiFi SSID girin</string>
+    <string name="wifi_ssid_not_set">Ayarlanmadı</string>
+
     <string name="listen_for_usb_devices_label">USB Cihazlarını Dinle</string>
     <string name="listen_for_usb_devices_description">Bir USB cihazı takıldığında Android sistem istemini göster.</string>
     <string name="auto_start_usb_label">USB ile otomatik başlat</string>

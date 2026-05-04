@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">Menu</string>
     <string name="settings">Ustawienia</string>
@@ -132,6 +132,12 @@
     <string name="key_music">Muzyka</string>
     <string name="key_nav">Nawigacja</string>
     <string name="key_night">Przełącz tryb nocny</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_home">Home</string>
+    <string name="key_app_switch">Ostatnie aplikacje</string>
+    <string name="key_button_a">Przycisk A (Wybierz)</string>
+    <string name="key_button_b">Przycisk B (Wstecz)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">Język aplikacji</string>
@@ -146,6 +152,14 @@
     <string name="usb_auto_connect_description">Automatycznie łączy się ze znanym urządzeniem USB po otwarciu aplikacji.</string>
     <string name="auto_start_bt_label">Autostart przy Bluetooth</string>
     <string name="auto_start_bt_description">Automatycznie otwórz Headunit Revived po połączeniu z określonym urządzeniem Bluetooth.</string>
+    <string name="auto_start_wifi_label">Autostart przy Wi-Fi</string>
+    <string name="auto_start_wifi_description">Automatycznie otwiera Headunit Revived po połączeniu z określoną siecią Wi-Fi (SSID).</string>
+    <string name="auto_start_wifi_ssid_label">SSID Wi-Fi</string>
+    <string name="auto_start_wifi_ssid_description">Połącz tylko, gdy połączono z tym SSID Wi-Fi</string>
+    <string name="auto_start_wifi_warning">Funkcja legacy: Może nie działać niezawodnie na Androidzie 8+ z powodu ograniczeń w tle. Upewnij się, że aplikacja jest wykluczona z optymalizacji baterii.</string>
+    <string name="enter_wifi_ssid">Wprowadź SSID Wi-Fi</string>
+    <string name="wifi_ssid_not_set">Nie ustawiono</string>
+
     <string name="listen_for_usb_devices_label">Reaguj na urządzenia USB</string>
     <string name="listen_for_usb_devices_description">Pokaż monit systemowy Android po podłączeniu urządzenia USB.</string>
     <string name="auto_start_usb_label">Automatyczne uruchamianie przez USB</string>

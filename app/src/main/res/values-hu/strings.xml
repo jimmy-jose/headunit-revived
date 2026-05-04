@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">Menü</string>
     <string name="settings">Beállítások</string>
@@ -131,6 +131,12 @@
     <string name="key_music">Zene</string>
     <string name="key_nav">Navigáció</string>
     <string name="key_night">Éjszakai mód kapcsolása</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_home">Kezdőlap</string>
+    <string name="key_app_switch">Legutóbbi alkalmazások</string>
+    <string name="key_button_a">A gomb (Kiválasztás)</string>
+    <string name="key_button_b">B gomb (Vissza)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">Alkalmazás nyelve</string>
@@ -145,6 +151,14 @@
     <string name="usb_auto_connect_description">Az alkalmazás megnyitásakor automatikus csatlakozás egy ismert USB-eszközhöz.</string>
     <string name="auto_start_bt_label">Bluetooth automatikus indítás</string>
     <string name="auto_start_bt_description">A Headunit Revived automatikus megnyitása, amikor egy adott Bluetooth-eszköz csatlakozik.</string>
+    <string name="auto_start_wifi_label">WiFi automatikus indítás</string>
+    <string name="auto_start_wifi_description">A Headunit Revived automatikus megnyitása egy adott WiFi SSID-hez való csatlakozáskor.</string>
+    <string name="auto_start_wifi_ssid_label">WiFi SSID</string>
+    <string name="auto_start_wifi_ssid_description">Csak akkor csatlakozzon, ha ehhez a WiFi SSID-hez kapcsolódik</string>
+    <string name="auto_start_wifi_warning">Régi funkció: a háttérbeli korlátozások miatt Android 8+ rendszeren nem biztos, hogy megbízhatóan működik. Győződjön meg róla, hogy az alkalmazás ki van véve az akkumulátor-optimalizálás alól.</string>
+    <string name="enter_wifi_ssid">Adja meg a WiFi SSID-t</string>
+    <string name="wifi_ssid_not_set">Nen beállítva</string>
+
     <string name="listen_for_usb_devices_label">USB-eszközök figyelése</string>
     <string name="listen_for_usb_devices_description">Android rendszerüzenet megjelenítése, ha USB-eszköz van csatlakoztatva.</string>
     <string name="auto_start_usb_label">Automatikus indítás USB-n</string>

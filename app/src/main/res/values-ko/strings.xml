@@ -147,6 +147,12 @@
     <string name="key_music">음악</string>
     <string name="key_nav">내비게이션</string>
     <string name="key_night">다크모드 토글</string>
+    <string name="key_enter">엔터 (Enter)</string>
+    <string name="key_home">홈 (Home)</string>
+    <string name="key_app_switch">최근 앱</string>
+    <string name="key_button_a">A 버튼 (선택)</string>
+    <string name="key_button_b">B 버튼 (뒤로가기)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">애플리케이션 언어</string>
@@ -161,6 +167,14 @@
     <string name="usb_auto_connect_description">애플리케이션이 시작될 때 알려진 USB 기기에 자동으로 연결합니다.</string>
     <string name="auto_start_bt_label">Bluetooth 자동시작</string>
     <string name="auto_start_bt_description">특정 Bluetooth 기기가 연결될 때 Headunit Revived를 자동으로 열기.</string>
+    <string name="auto_start_wifi_label">Wi-Fi 자동 시작</string>
+    <string name="auto_start_wifi_description">특정 Wi-Fi SSID에 연결될 때 Headunit Revived를 자동으로 실행합니다.</string>
+    <string name="auto_start_wifi_ssid_label">Wi-Fi SSID</string>
+    <string name="auto_start_wifi_ssid_description">이 Wi-Fi SSID에 연결되어 있을 때만 연결을 시도합니다</string>
+    <string name="auto_start_wifi_warning">레거시 기능: 백그라운드 제한으로 인해 Android 8 이상에서는 동작이 불안정할 수 있습니다. 앱을 배터리 최적화 대상에서 제외했는지 확인하세요.</string>
+    <string name="enter_wifi_ssid">Wi-Fi SSID를 입력하세요</string>
+    <string name="wifi_ssid_not_set">설정되지 않음</string>
+
     <string name="listen_for_usb_devices_label">USB 기기 수신</string>
     <string name="listen_for_usb_devices_description">USB 기기가 연결될 때 Android 시스템 프롬프트를 표시합니다.</string>
     <string name="auto_start_usb_label">USB 자동시작</string>

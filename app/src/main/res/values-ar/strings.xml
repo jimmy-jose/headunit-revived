@@ -1,4 +1,4 @@
-﻿<resources>
+<resources>
     <string name="app_name">Headunit Revived</string>
     <string name="menu">القائمة</string>
     <string name="settings">الإعدادات</string>
@@ -132,6 +132,12 @@
     <string name="key_music">الموسيقى</string>
     <string name="key_nav">الملاحة</string>
     <string name="key_night">تبديل الوضع الليلي</string>
+    <string name="key_enter">إدخال (Enter)</string>
+    <string name="key_home">القائمة الرئيسية (Home)</string>
+    <string name="key_app_switch">التطبيقات الأخيرة</string>
+    <string name="key_button_a">الزر A (اختيار)</string>
+    <string name="key_button_b">الزر B (رجوع)</string>
+
 
     <!-- Language Settings -->
     <string name="app_language">لغة التطبيق</string>
@@ -146,6 +152,14 @@
     <string name="usb_auto_connect_description">الاتصال تلقائيا بجهاز USB معروف عند فتح التطبيق.</string>
     <string name="auto_start_bt_label">التشغيل التلقائي عبر البلوتوث</string>
     <string name="auto_start_bt_description">فتح Headunit Revived تلقائيا عند اتصال جهاز بلوتوث محدد.</string>
+    <string name="auto_start_wifi_label">تشغيل تلقائي عبر الواي فاي</string>
+    <string name="auto_start_wifi_description">فتح Headunit Revived تلقائياً عند الاتصال بشبكة واي فاي محددة (SSID).</string>
+    <string name="auto_start_wifi_ssid_label">اسم شبكة الواي فاي (SSID)</string>
+    <string name="auto_start_wifi_ssid_description">الاتصال فقط عند الارتباط بشبكة الواي فاي هذه</string>
+    <string name="auto_start_wifi_warning">ميزة قديمة: قد لا تعمل بشكل موثوق على Android 8+ بسبب قيود الخلفية. تأكد من استثناء التطبيق من تحسين البطارية.</string>
+    <string name="enter_wifi_ssid">أدخل اسم شبكة الواي فاي (SSID)</string>
+    <string name="wifi_ssid_not_set">غير محدد</string>
+
     <string name="listen_for_usb_devices_label">الاستماع لأجهزة USB</string>
     <string name="listen_for_usb_devices_description">إظهار مطالبة نظام Android عند توصيل جهاز USB.</string>
     <string name="auto_start_usb_label">تشغيل تلقائي عند توصيل USB</string>
