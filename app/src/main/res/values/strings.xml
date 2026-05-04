@@ -403,6 +403,7 @@
 
     <string name="wifi_disabled_info">Info: Wi-Fi is disabled.</string>
     <string name="bt_not_enabled">Bluetooth is disabled</string>
+    <string name="bt_permission_denied">Bluetooth permission denied. Cannot scan for devices.</string>
 
     <!-- Vehicle Info Settings -->
     <string name="vehicle_info_settings">Vehicle information</string>

@@ -30,6 +30,9 @@ import com.andrerinas.headunitrevived.utils.LogExporter
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.activity.result.contract.ActivityResultContracts
+import android.content.pm.PackageManager
+import com.andrerinas.headunitrevived.connection.NativeAaHandshakeManager
 
 class SettingsFragment : Fragment() {
     private lateinit var settings: Settings
@@ -89,6 +92,14 @@ class SettingsFragment : Fragment() {
     private var requiresRestart = false
     private var hasChanges = false
     private val SAVE_ITEM_ID = 1001
+
+    private val bluetoothPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            handleNativeAaSelection()
+        } else {
+            Toast.makeText(requireContext(), R.string.bt_permission_denied, Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_settings, container, false)
@@ -480,31 +491,11 @@ class SettingsFragment : Fragment() {
                 }
 
                 if (newMode == 3) {
-                    // Compatibility check for Native AA
-                    if (com.andrerinas.headunitrevived.connection.NativeAaHandshakeManager.checkCompatibility()) {
-                        MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
-                            .setTitle(R.string.supported_nativeaa)
-                            .setMessage(R.string.supported_nativeaa_desc)
-                            .setPositiveButton(android.R.string.ok) { dialog, _ ->
-                                pendingWifiConnectionMode = 3
-                                checkChanges()
-                                updateSettingsList()
-                                dialog.dismiss()
-                            }
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && 
+                        ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                        bluetoothPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
                     } else {
-                        MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
-                            .setTitle(R.string.not_supported_nativeaa)
-                            .setMessage(R.string.not_supported_nativeaa_desc)
-                            .setPositiveButton(android.R.string.ok) { dialog, _ ->
-                                pendingWifiConnectionMode = 3
-                                checkChanges()
-                                updateSettingsList()
-                                dialog.dismiss()
-                            }
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show()
+                        handleNativeAaSelection()
                     }
                 } else {
                     pendingWifiConnectionMode = newMode
@@ -1662,6 +1653,34 @@ class SettingsFragment : Fragment() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun handleNativeAaSelection() {
+        if (NativeAaHandshakeManager.checkCompatibility(requireContext())) {
+            MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+                .setTitle(R.string.supported_nativeaa)
+                .setMessage(R.string.supported_nativeaa_desc)
+                .setPositiveButton(android.R.string.ok) { dialog, _ ->
+                    pendingWifiConnectionMode = 3
+                    checkChanges()
+                    updateSettingsList()
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        } else {
+            MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+                .setTitle(R.string.not_supported_nativeaa)
+                .setMessage(R.string.not_supported_nativeaa_desc)
+                .setPositiveButton(android.R.string.ok) { dialog, _ ->
+                    pendingWifiConnectionMode = 3
+                    checkChanges()
+                    updateSettingsList()
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
     }
 
     companion object {

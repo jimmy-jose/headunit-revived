@@ -8,6 +8,9 @@ import android.content.Context
 import com.andrerinas.headunitrevived.aap.protocol.proto.Wireless
 import com.andrerinas.headunitrevived.utils.AppLog
 import kotlinx.coroutines.*
+import android.os.Build
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import java.io.DataInputStream
 import java.io.IOException
 import java.io.OutputStream
@@ -27,7 +30,14 @@ class NativeAaHandshakeManager(
         private val HFP_UUID = UUID.fromString("0000111e-0000-1000-8000-00805f9b34fb")
         private val A2DP_SOURCE_UUID = UUID.fromString("00001112-0000-1000-8000-00805f9b34fb")
 
-        fun checkCompatibility(): Boolean {
+        fun checkCompatibility(context: Context): Boolean {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) 
+                    != PackageManager.PERMISSION_GRANTED) {
+                    AppLog.w("NativeAA: Compatibility Check skipped - Missing BLUETOOTH_CONNECT")
+                    return false
+                }
+            }
             val adapter = BluetoothAdapter.getDefaultAdapter() ?: return false
             if (!adapter.isEnabled) return false
             return try {
@@ -65,8 +75,16 @@ class NativeAaHandshakeManager(
     @SuppressLint("MissingPermission")
     fun start() {
         if (isRunning) return
-        isRunning = true
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) 
+                != PackageManager.PERMISSION_GRANTED) {
+                AppLog.e("NativeAA: Missing BLUETOOTH_CONNECT permission. Handshake server cannot start.")
+                return
+            }
+        }
+
+        isRunning = true
         val adapter = BluetoothAdapter.getDefaultAdapter()
         if (adapter == null || !adapter.isEnabled) {
             AppLog.e("NativeAA: Bluetooth adapter not available or disabled")
@@ -124,6 +142,13 @@ class NativeAaHandshakeManager(
      * This acts as a signal for the phone to start looking for the headunit.
      */
     fun triggerPoke() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) 
+                != PackageManager.PERMISSION_GRANTED) {
+                AppLog.w("NativeAA: Missing BLUETOOTH_CONNECT. Cannot triggerPoke.")
+                return
+            }
+        }
         val adapter = BluetoothAdapter.getDefaultAdapter() ?: return
         val settings = com.andrerinas.headunitrevived.App.provide(context).settings
         val lastMac = settings.autoStartBluetoothDeviceMac
@@ -166,6 +191,13 @@ class NativeAaHandshakeManager(
      * Start a manual poke (wakeup) for a specific Bluetooth device.
      */
     fun manualPoke(address: String) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.BLUETOOTH_CONNECT) 
+                != PackageManager.PERMISSION_GRANTED) {
+                AppLog.w("NativeAA: Missing BLUETOOTH_CONNECT. Cannot manualPoke.")
+                return
+            }
+        }
         val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return
         try {
             val device = adapter.getRemoteDevice(address)
