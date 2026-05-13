@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Headunit Revived</string>
+    <string name="app_name">HeadUnitLauncher</string>
     <string name="menu">القائمة</string>
     <string name="settings">الإعدادات</string>
 
@@ -12,7 +12,7 @@
     <string name="video">Android Auto</string>
     <string name="self_mode">الوضع الذاتي</string>
     <string name="to_android_auto">إلى Android Auto</string>
-    <string name="title">Headunit Revived</string>
+    <string name="title">HeadUnitLauncher</string>
     <string name="remove">إزالة</string>
     <string name="usb">USB</string>
     <string name="wifi">واي فاي</string>
@@ -151,9 +151,9 @@
     <string name="usb_auto_connect">الاتصال التلقائي بـ USB</string>
     <string name="usb_auto_connect_description">الاتصال تلقائيا بجهاز USB معروف عند فتح التطبيق.</string>
     <string name="auto_start_bt_label">التشغيل التلقائي عبر البلوتوث</string>
-    <string name="auto_start_bt_description">فتح Headunit Revived تلقائيا عند اتصال جهاز بلوتوث محدد.</string>
+    <string name="auto_start_bt_description">فتح HeadUnitLauncher تلقائيا عند اتصال جهاز بلوتوث محدد.</string>
     <string name="auto_start_wifi_label">تشغيل تلقائي عبر الواي فاي</string>
-    <string name="auto_start_wifi_description">فتح Headunit Revived تلقائياً عند الاتصال بشبكة واي فاي محددة (SSID).</string>
+    <string name="auto_start_wifi_description">فتح HeadUnitLauncher تلقائياً عند الاتصال بشبكة واي فاي محددة (SSID).</string>
     <string name="auto_start_wifi_ssid_label">اسم شبكة الواي فاي (SSID)</string>
     <string name="auto_start_wifi_ssid_description">الاتصال فقط عند الارتباط بشبكة الواي فاي هذه</string>
     <string name="auto_start_wifi_warning">ميزة قديمة: قد لا تعمل بشكل موثوق على Android 8+ بسبب قيود الخلفية. تأكد من استثناء التطبيق من تحسين البطارية.</string>
@@ -176,7 +176,7 @@
     <string name="bt_permission_denied_title">مطلوب إذن البلوتوث</string>
     <string name="bt_permission_denied_message">إذن البلوتوث مطلوب لاختيار الأجهزة المقترنة. يرجى منحه في إعدادات التطبيق.</string>
     <string name="overlay_permission_title">إذن البدء في الخلفية</string>
-    <string name="overlay_permission_description">للسماح لـ Headunit Revived بالفتح التلقائي عند اتصال البلوتوث، يرجى تفعيل إذن "العرض فوق التطبيقات الأخرى" في الشاشة التالية.</string>
+    <string name="overlay_permission_description">للسماح لـ HeadUnitLauncher بالفتح التلقائي عند اتصال البلوتوث، يرجى تفعيل إذن "العرض فوق التطبيقات الأخرى" في الشاشة التالية.</string>
     <string name="open_settings">الإعدادات</string>
     <string name="wireless_connection_settings">اتصال لاسلكي</string>
     <string name="right_hand_drive">القيادة على اليمين</string>
@@ -252,9 +252,9 @@
     <!-- Info Settings -->
     <string name="category_info">المعلومات</string>
     <string name="about">حول &amp; الدعم</string>
-    <string name="about_description">الحصول على مزيد من المعلومات حول Headunit Revived</string>
+    <string name="about_description">الحصول على مزيد من المعلومات حول HeadUnitLauncher</string>
     <string name="version">الإصدار</string>
-    <string name="about_title">حول Headunit Revived</string>
+    <string name="about_title">حول HeadUnitLauncher</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
     <!-- Safety Disclaimer -->
@@ -265,7 +265,7 @@
         <b>١. التركيز على الطريق</b><br/>
         استخدام هذا البرنامج أثناء القيادة قد يشتت الانتباه ويكون خطيرا. أول الأولوية دائما للقيادة الآمنة والالتزام بأنظمة المرور المحلية. استخدم هذا التطبيق فقط عند الأمان التام.<br/><br/>
         <b>٢. تحديد المسؤولية</b><br/>
-        يقدم Headunit Revived "كما هو" دون أي ضمان من أي نوع. لا يتحمل المطورون أي مسؤولية عن الحوادث أو الأضرار التي تلحق بسيارتك/جهازك أو أي تبعات قانونية ناجمة عن استخدام هذا البرنامج.<br/><br/>
+        يقدم HeadUnitLauncher "كما هو" دون أي ضمان من أي نوع. لا يتحمل المطورون أي مسؤولية عن الحوادث أو الأضرار التي تلحق بسيارتك/جهازك أو أي تبعات قانونية ناجمة عن استخدام هذا البرنامج.<br/><br/>
         <b>٣. عدم الانتساب</b><br/>
         هذا المشروع مبادرة مفتوحة المصدر مستقلة، وليس له أي صلة أو اعتماد أو ارتباط بشركة Google LLC أو علامة Android Auto التجارية.
     ]]></string>
@@ -311,7 +311,7 @@
     <string name="connection_interrupted">فُقد الاتصال</string>
     <string name="connection_interrupted_detail">جارٍ إعادة المحاولة…</string>
     <string name="wifi_disconnect_toast">تم قطع اتصال Android Auto: إذا كنت تستخدم AA لاسلكي، عطّل \"التبديل بين الشبكات\" أو \"تسريع الشبكة\" في إعدادات WiFi الهاتف</string>
-    <string name="notification_service_running">Headunit Revived يعمل</string>
+    <string name="notification_service_running">HeadUnitLauncher يعمل</string>
     <string name="notification_projection_active">Android Auto قيد الإسقاط</string>
     <string name="shortcut_connect_title">اتصال</string>
     <string name="shortcut_connect_desc">الاتصال بآخر جهاز معروف</string>

@@ -1,5 +1,4 @@
-import org.jetbrains.kotlin.config.KotlinCompilerVersion
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions // Import KotlinJvmOptions
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     id("com.android.library")
@@ -7,12 +6,11 @@ plugins {
 }
 
 android {
-    compileSdk = 34
-    namespace = "com.andrerinas.headunitrevived.contract"
+    compileSdk = 37
+    namespace = "org.xs.headunitlauncher.contract"
 
     defaultConfig {
         minSdk = 16
-        targetSdk = 34
     }
 
 //    buildTypes {
@@ -32,13 +30,20 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
-    kotlinOptions {
-        (this as KotlinJvmOptions).let {
-           it.jvmTarget = "1.8"
-        }
+    lint {
+        targetSdk = 37
+    }
+    testOptions {
+        targetSdk = 37
     }
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.20")
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_1_8)
+    }
 }

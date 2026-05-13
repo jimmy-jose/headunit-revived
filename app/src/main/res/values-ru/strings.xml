@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Headunit Revived</string>
+    <string name="app_name">HeadUnitLauncher</string>
     <string name="menu">Меню</string>
     <string name="settings">Настройки</string>
 
@@ -12,7 +12,7 @@
     <string name="video">Android Auto</string>
     <string name="self_mode">Автономный режим</string>
     <string name="to_android_auto">В Android Auto</string>
-    <string name="title">Headunit Revived</string>
+    <string name="title">HeadUnitLauncher</string>
     <string name="remove">Удалить</string>
     <string name="usb">USB</string>
     <string name="wifi">WiFi</string>
@@ -151,9 +151,9 @@
     <string name="usb_auto_connect">Автоподключение USB</string>
     <string name="usb_auto_connect_description">Автоматически подключаться к известному USB-устройству при запуске приложения.</string>
     <string name="auto_start_bt_label">Автозапуск при Bluetooth</string>
-    <string name="auto_start_bt_description">Автоматически открывать Headunit Revived при подключении определенного Bluetooth-устройства.</string>
+    <string name="auto_start_bt_description">Автоматически открывать HeadUnitLauncher при подключении определенного Bluetooth-устройства.</string>
     <string name="auto_start_wifi_label">Автозапуск при WiFi</string>
-    <string name="auto_start_wifi_description">Автоматически открывать Headunit Revived при подключении к определенной WiFi-сети (SSID).</string>
+    <string name="auto_start_wifi_description">Автоматически открывать HeadUnitLauncher при подключении к определенной WiFi-сети (SSID).</string>
     <string name="auto_start_wifi_ssid_label">SSID WiFi</string>
     <string name="auto_start_wifi_ssid_description">Подключаться только при сопряжении with этой WiFi-сетью (SSID)</string>
     <string name="auto_start_wifi_warning">Устаревшая функция: может работать нестабильно на Android 8+ из-за фоновых ограничений. Убедитесь, что приложение исключено из оптимизации батареи.</string>
@@ -176,7 +176,7 @@
     <string name="bt_permission_denied_title">Требуется разрешение Bluetooth</string>
     <string name="bt_permission_denied_message">Разрешение Bluetooth необходимо для выбора сопряжённых устройств. Предоставьте его в настройках приложения.</string>
     <string name="overlay_permission_title">Разрешение на запуск в фоне</string>
-    <string name="overlay_permission_description">Чтобы Headunit Revived мог автоматически открываться при подключении Bluetooth, включите разрешение "Показывать поверх других приложений" на следующем экране.</string>
+    <string name="overlay_permission_description">Чтобы HeadUnitLauncher мог автоматически открываться при подключении Bluetooth, включите разрешение "Показывать поверх других приложений" на следующем экране.</string>
     <string name="open_settings">Настройки</string>
     <string name="wireless_connection_settings">Беспроводное соединение</string>
     <string name="right_hand_drive">Праворульный автомобиль</string>
@@ -252,9 +252,9 @@
     <!-- Info Settings -->
     <string name="category_info">Информация</string>
     <string name="about">Справка и поддержка</string>
-    <string name="about_description">Узнать больше о Headunit Revived</string>
+    <string name="about_description">Узнать больше о HeadUnitLauncher</string>
     <string name="version">Версия</string>
-    <string name="about_title">О Headunit Revived</string>
+    <string name="about_title">О HeadUnitLauncher</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
     <!-- Safety Disclaimer -->
@@ -265,7 +265,7 @@
         <b>1. Cосредоточьтесь на вождении</b><br/>
         Использование этого ПО за рулем может отвлекать и быть опасным. Всегда отдавайте приоритет безопасному вождению и соблюдайте все правила дорожного движения. Используйте это приложение только тогда, когда это безопасно.<br/><br/>
         <b>2. Отказ от ответственности</b><br/>
-        Headunit Revived предоставляется «как есть» без каких-либо гарантий. Разработчики не несут ответственности за несчастные случаи, повреждения транспортного средства/устройства или юридические последствия, возникающие в результате использования этого ПО.<br/><br/>
+        HeadUnitLauncher предоставляется «как есть» без каких-либо гарантий. Разработчики не несут ответственности за несчастные случаи, повреждения транспортного средства/устройства или юридические последствия, возникающие в результате использования этого ПО.<br/><br/>
         <b>3. Отсутствие аффилированности</b><br/>
         Этот проект является независимой инициативой с открытым исходным кодом и ни коим образом не связан с Google LLC или брендом Android Auto.
     ]]></string>
@@ -311,7 +311,7 @@
     <string name="connection_interrupted">Соединение потеряно</string>
     <string name="connection_interrupted_detail">Повторное подключение…</string>
     <string name="wifi_disconnect_toast">Android Auto отключён: При беспроводном AA отключите \"Переключение между сетями\" или \"Ускорение сети\" в настройках WiFi телефона</string>
-    <string name="notification_service_running">Headunit Revived запущен</string>
+    <string name="notification_service_running">HeadUnitLauncher запущен</string>
     <string name="notification_projection_active">Трансляция Android Auto активна</string>
     <string name="shortcut_connect_title">Подключить</string>
     <string name="shortcut_connect_desc">Подключиться к последнему устройству</string>

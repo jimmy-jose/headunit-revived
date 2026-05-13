@@ -104,11 +104,13 @@
             android:theme="@style/SplashTheme"
             android:exported="true">
 
-            <!-- Primary Launcher Filter -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.CAR_DOCK" />
+                <category android:name="android.intent.category.CAR_HOME" />
             </intent-filter>
 
             <!-- Navigation Role Registration (allows selecting as default nav app) -->
@@ -274,10 +276,10 @@
             android:noHistory="true"
             android:taskAffinity="">
             <intent-filter>
-                <action android:name="com.andrerinas.headunitrevived.ACTION_SET_NIGHT_MODE" />
-                <action android:name="com.andrerinas.headunitrevived.ACTION_CONNECT" />
-                <action android:name="com.andrerinas.headunitrevived.ACTION_DISCONNECT" />
-                <action android:name="com.andrerinas.headunitrevived.ACTION_STOP_SERVICE" />
+                <action android:name="org.xs.headunitlauncher.ACTION_SET_NIGHT_MODE" />
+                <action android:name="org.xs.headunitlauncher.ACTION_CONNECT" />
+                <action android:name="org.xs.headunitlauncher.ACTION_DISCONNECT" />
+                <action android:name="org.xs.headunitlauncher.ACTION_STOP_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <intent-filter>

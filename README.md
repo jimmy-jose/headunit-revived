@@ -1,4 +1,4 @@
-# Headunit Revived
+# HeadUnitLauncher
 
 <a href='https://play.google.com/store/apps/details?id=com.andrerinas.headunitrevived'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width="200"/></a>
 <a href='http://www.amazon.com/gp/mas/dl/android?p=com.andrerinas.headunitrevived'><img alt='Available at Amazon Appstore' src='https://images-na.ssl-images-amazon.com/images/G/01/mobile-apps/devportal2/res/images/amazon-appstore-badge-english-black.png' width="200"/></a>
@@ -9,7 +9,7 @@
     height="200">
 </p>
 
-Headunit Revived is an Android app that allows you to turn your Android tablet or phone into an Android Auto receiver. This project is a revived version of the original headunit project by the great Michael Reid. The original project can be found here:
+HeadUnitLauncher is an Android app that allows you to turn your Android tablet or phone into an Android Auto receiver. This project is a revived version of the original headunit project by the great Michael Reid. The original project can be found here:
 https://github.com/mikereidis/headunit
 
 ## Screenshots
@@ -21,10 +21,10 @@ https://github.com/mikereidis/headunit
 **Check out the [Wiki](https://github.com/andreknieriem/headunit-revived/wiki) for detailed documentation, setup guides and troubleshooting!**
 
 ### Wired USB Connection
-- Connect your Android device (phone) to the tablet running Headunit Revived via USB cable.
+- Connect your Android device (phone) to the tablet running HeadUnitLauncher via USB cable.
 - Make sure that Android Auto is installed on your phone.
 - Set your phone to Host-Mode if nescessary and select Android Auto
-- Click the USB Button in Headunit Revived, find your phone and click the right button to allow connection
+- Click the USB Button in HeadUnitLauncher, find your phone and click the right button to allow connection
 - Click on your phone in the list and wait for Android Auto to start
 
 ### Wireless Helper (Recommended)
@@ -34,7 +34,7 @@ This is the most reliable way to connect wirelessly. It uses our companion app o
 - **Features:** Minimal configuration, supports NSD, Wi-Fi Direct Auto-Connect, and Bluetooth Auto-Start.
 
 **Setup:**
-- In Headunit Revived Settings: Set **Wireless Mode** to **Helper Mode**.
+- In HeadUnitLauncher Settings: Set **Wireless Mode** to **Helper Mode**.
 - Ensure both devices are in the same network (Hotspot or WiFi).
 - Open the Wireless Helper app on your phone and start the service.
 - The helper will find your headunit and initiate the connection automatically.

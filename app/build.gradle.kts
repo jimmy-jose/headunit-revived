@@ -1,7 +1,6 @@
-import org.jetbrains.kotlin.config.KotlinCompilerVersion
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmOptions
-import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.io.FileInputStream
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -24,6 +23,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-nearby:19.3.0")
     // ViewModel and LiveData
     implementation("androidx.lifecycle:lifecycle-extensions:2.2.0")
+    //noinspection LifecycleAnnotationProcessorWithJava8
     kapt("androidx.lifecycle:lifecycle-compiler:2.6.2")
 
     // KTX
@@ -33,7 +33,7 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.2.20")
     implementation(project(":contract"))
 
     // Multidex
@@ -44,13 +44,13 @@ dependencies {
     implementation("androidx.navigation:navigation-ui-ktx:2.3.5")
 
     // DexMaker for runtime subclassing (Hotspot Fix)
-    implementation("com.linkedin.dexmaker:dexmaker:2.28.3")
+    implementation("com.linkedin.dexmaker:dexmaker:2.28.6")
 }
 
 android {
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "27.0.12077973"
-    namespace = "com.andrerinas.headunitrevived"
+    namespace = "org.xs.headunitlauncher"
 
     buildFeatures {
         buildConfig = true
@@ -97,12 +97,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.andrerinas.headunitrevived"
+        applicationId = "org.xs.headunitlauncher"
         minSdk = 16
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 65
         versionName = "2.3.0-beta1"
-        setProperty("archivesBaseName", "${applicationId}_${versionName}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         multiDexEnabled = true
         vectorDrawables.useSupportLibrary = true
@@ -165,7 +164,7 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-project.txt")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-project.txt")
             if (signingConfigs.getByName("release").storeFile != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -188,12 +187,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
-    kotlinOptions {
-        (this as KotlinJvmOptions).let {
-            it.jvmTarget = "1.8"
-        }
-    }
-
     applicationVariants.all {
         val variant = this
         variant.outputs
@@ -206,5 +199,11 @@ android {
                 }
                 output.outputFileName = outputFileName
             }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_1_8)
     }
 }

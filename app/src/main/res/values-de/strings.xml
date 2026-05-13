@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Headunit Revived</string>
+    <string name="app_name">HeadUnitLauncher</string>
     <string name="menu">Menü</string>
     <string name="settings">Einstellungen</string>
 
@@ -12,7 +12,7 @@
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
     <string name="to_android_auto">Zu Android Auto</string>
-    <string name="title">Headunit Revived</string>
+    <string name="title">HeadUnitLauncher</string>
     <string name="remove">Entfernen</string>
     <string name="usb">USB</string>
     <string name="wifi">WLAN</string>
@@ -167,9 +167,9 @@
     <string name="usb_auto_connect">USB Auto-Verbindung</string>
     <string name="usb_auto_connect_description">Verbindet sich automatisch mit einem bekannten USB-Gerät, sobald die App geöffnet wird.</string>
     <string name="auto_start_bt_label">Auto-Start bei Bluetooth</string>
-    <string name="auto_start_bt_description">Startet Headunit Revived automatisch, wenn sich ein bestimmtes Bluetooth-Gerät verbindet.</string>
+    <string name="auto_start_bt_description">Startet HeadUnitLauncher automatisch, wenn sich ein bestimmtes Bluetooth-Gerät verbindet.</string>
     <string name="auto_start_wifi_label">Auto-Start bei WLAN</string>
-    <string name="auto_start_wifi_description">Öffnet Headunit Revived automatisch, wenn eine Verbindung zu einer bestimmten WLAN-SSID besteht.</string>
+    <string name="auto_start_wifi_description">Öffnet HeadUnitLauncher automatisch, wenn eine Verbindung zu einer bestimmten WLAN-SSID besteht.</string>
     <string name="auto_start_wifi_ssid_label">WLAN-SSID</string>
     <string name="auto_start_wifi_ssid_description">Nur verbinden, wenn mit dieser WLAN-SSID gekoppelt</string>
     <string name="auto_start_wifi_warning">Legacy-Funktion: Dies funktioniert unter Android 8+ aufgrund von Hintergrundbeschränkungen möglicherweise nicht zuverlässig. Stellen Sie sicher, dass die App von der Akku-Optimierung ausgeschlossen ist.</string>
@@ -192,7 +192,7 @@
     <string name="bt_permission_denied_title">Bluetooth-Berechtigung erforderlich</string>
     <string name="bt_permission_denied_message">Die Bluetooth-Berechtigung wird benötigt, um gekoppelte Geräte auszuwählen. Bitte in den App-Einstellungen erteilen.</string>
     <string name="overlay_permission_title">Hintergrund-Start Berechtigung</string>
-    <string name="overlay_permission_description">Damit Headunit Revived automatisch starten kann, wenn Bluetooth verbindet, aktivieren Sie bitte die Berechtigung "Über anderen Apps einblenden" im nächsten Bildschirm.</string>
+    <string name="overlay_permission_description">Damit HeadUnitLauncher automatisch starten kann, wenn Bluetooth verbindet, aktivieren Sie bitte die Berechtigung "Über anderen Apps einblenden" im nächsten Bildschirm.</string>
     <string name="open_settings">Einstellungen</string>
     <string name="right_hand_drive">Rechtslenker</string>
     <string name="right_hand_drive_description">Benutzeroberfläche für Rechtsverkehr ausrichten</string>
@@ -275,9 +275,9 @@
     <!-- Info Settings -->
     <string name="category_info">Info</string>
     <string name="about">Über &amp; Support</string>
-    <string name="about_description">Mehr Informationen über Headunit Revived</string>
+    <string name="about_description">Mehr Informationen über HeadUnitLauncher</string>
     <string name="version">Version</string>
-    <string name="about_title">Über Headunit Revived</string>
+    <string name="about_title">Über HeadUnitLauncher</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
     <!-- Safety Disclaimer -->
@@ -288,7 +288,7 @@
         <b>1. Auf die Straße achten</b><br/>
         Die Bedienung dieser Software während der Fahrt kann ablenken und gefährlich sein. Priorisieren Sie stets die sichere Fahrt und beachten Sie alle Verkehrsregeln. Nutzen Sie diese Anwendung nur, wenn es sicher ist.<br/><br/>
         <b>2. Haftungsausschluss</b><br/>
-        Headunit Revived wird "wie besehen" ohne jegliche Gewährleistung bereitgestellt. Die Entwickler übernehmen keine Haftung für Unfälle, Schäden am Fahrzeug/Gerät oder rechtliche Konsequenzen, die aus der Nutzung dieser Software entstehen.<br/><br/>
+        HeadUnitLauncher wird "wie besehen" ohne jegliche Gewährleistung bereitgestellt. Die Entwickler übernehmen keine Haftung für Unfälle, Schäden am Fahrzeug/Gerät oder rechtliche Konsequenzen, die aus der Nutzung dieser Software entstehen.<br/><br/>
         <b>3. Keine Zugehörigkeit</b><br/>
         Dieses Projekt ist eine unabhängige Open-Source-Initiative und steht in keiner Verbindung zu Google LLC oder der Marke Android Auto.
     ]]></string>
@@ -336,7 +336,7 @@
     <string name="wifi_disconnect_toast">Android Auto getrennt: Bei kabellosem AA \"Zwischen Netzwerken wechseln\" oder \"Netzwerkbeschleunigung\" in den WLAN-Einstellungen deaktivieren</string>
     <string name="reset_usb_option">USB-Verbindung zurücksetzen</string>
     <string name="reset_usb_timeout">USB-Gerät nicht gefunden. Bitte Verbindung prüfen.</string>
-    <string name="notification_service_running">Headunit Revived läuft</string>
+    <string name="notification_service_running">HeadUnitLauncher läuft</string>
     <string name="notification_projection_active">Android Auto wird projiziert</string>
     <string name="shortcut_connect_title">Verbinden</string>
     <string name="shortcut_connect_desc">Mit letztem Handy verbinden</string>

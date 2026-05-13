@@ -6,7 +6,7 @@
 
     <fragment
         android:id="@+id/homeFragment"
-        android:name="com.andrerinas.headunitrevived.main.HomeFragment"
+        android:name="org.xs.headunitlauncher.main.HomeFragment"
         android:label="@string/app_name">
         <action
             android:id="@+id/action_homeFragment_to_usbListFragment"
@@ -22,11 +22,18 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_homeFragment_to_appLauncherListFragment"
+            app:destination="@id/appLauncherListFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
         android:id="@+id/settingsFragment"
-        android:name="com.andrerinas.headunitrevived.main.SettingsFragment"
+        android:name="org.xs.headunitlauncher.main.SettingsFragment"
         android:label="@string/settings">
         <action
             android:id="@+id/action_settingsFragment_to_keymapFragment"
@@ -88,52 +95,57 @@
 
     <fragment
         android:id="@+id/wirelessConnectionFragment"
-        android:name="com.andrerinas.headunitrevived.main.WirelessConnectionFragment"
+        android:name="org.xs.headunitlauncher.main.WirelessConnectionFragment"
         android:label="@string/wireless_connection_settings" />
 
     <fragment
         android:id="@+id/keymapFragment"
-        android:name="com.andrerinas.headunitrevived.main.KeymapFragment"
+        android:name="org.xs.headunitlauncher.main.KeymapFragment"
         android:label="@string/keymap" />
 
     <fragment
         android:id="@+id/aboutFragment"
-        android:name="com.andrerinas.headunitrevived.main.AboutFragment"
+        android:name="org.xs.headunitlauncher.main.AboutFragment"
         android:label="@string/about" />
 
     <fragment
         android:id="@+id/autoConnectFragment"
-        android:name="com.andrerinas.headunitrevived.main.AutoConnectFragment"
+        android:name="org.xs.headunitlauncher.main.AutoConnectFragment"
         android:label="@string/auto_connect_settings" />
 
     <fragment
         android:id="@+id/darkModeFragment"
-        android:name="com.andrerinas.headunitrevived.main.DarkModeFragment"
+        android:name="org.xs.headunitlauncher.main.DarkModeFragment"
         android:label="@string/dark_mode_settings" />
 
     <fragment
         android:id="@+id/autoStartFragment"
-        android:name="com.andrerinas.headunitrevived.main.AutoStartFragment"
+        android:name="org.xs.headunitlauncher.main.AutoStartFragment"
         android:label="@string/auto_start_settings" />
 
     <fragment
         android:id="@+id/vehicleInfoFragment"
-        android:name="com.andrerinas.headunitrevived.main.VehicleInfoFragment"
+        android:name="org.xs.headunitlauncher.main.VehicleInfoFragment"
         android:label="@string/vehicle_info_settings" />
 
     <fragment
         android:id="@+id/usbListFragment"
-        android:name="com.andrerinas.headunitrevived.main.UsbListFragment"
+        android:name="org.xs.headunitlauncher.main.UsbListFragment"
         android:label="@string/usb" />
 
     <fragment
         android:id="@+id/networkListFragment"
-        android:name="com.andrerinas.headunitrevived.main.NetworkListFragment"
+        android:name="org.xs.headunitlauncher.main.NetworkListFragment"
         android:label="@string/wifi" />
 
     <fragment
         android:id="@+id/micSettingsFragment"
-        android:name="com.andrerinas.headunitrevived.main.MicSettingsFragment"
+        android:name="org.xs.headunitlauncher.main.MicSettingsFragment"
         android:label="@string/microphone_settings" />
+
+    <fragment
+        android:id="@+id/appLauncherListFragment"
+        android:name="org.xs.headunitlauncher.main.AppLauncherListFragment"
+        android:label="@string/apps" />
 
 </navigation>

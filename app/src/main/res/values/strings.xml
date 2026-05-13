@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Headunit Revived</string>
+    <string name="app_name">HeadUnitLauncher</string>
     <string name="menu">Menu</string>
     <string name="settings">Settings</string>
 
@@ -9,10 +9,12 @@
     <string name="allowed">Allowed</string>
     <string name="ignored">Ignored</string>
     <string name="exit">Exit</string>
+    <string name="apps">Apps</string>
+    <string name="android_settings">Android Settings</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
     <string name="to_android_auto">To Android Auto</string>
-    <string name="title">Headunit Revived</string>
+    <string name="title">HeadUnitLauncher</string>
     <string name="remove">Remove</string>
     <string name="usb">USB</string>
     <string name="wifi">WiFi</string>
@@ -114,6 +116,8 @@
     <string name="no_usb_device_connected">No USB device connected to device.</string>
     <string name="press_back_again_to_exit">Press back again to exit</string>
     <string name="back">Back</string>
+    <string name="failed_open_app">Unable to open app</string>
+    <string name="no_apps_found">No launchable apps found</string>
     <string name="debug_mode">Debug Mode</string>
     <string name="debug_mode_description">Toggle more Logging</string>
     <string name="log_level">Log Level</string>
@@ -166,7 +170,7 @@
     <string name="usb_auto_connect">Auto-connect USB</string>
     <string name="usb_auto_connect_description">Automatically connect to a known USB device when the application is opened.</string>
     <string name="auto_start_bt_label">Auto-start on Bluetooth</string>
-    <string name="auto_start_bt_description">Automatically open Headunit Revived when a specific Bluetooth device connects.</string>
+    <string name="auto_start_bt_description">Automatically open HeadUnitLauncher when a specific Bluetooth device connects.</string>
     <string name="listen_for_usb_devices_label">Listen for USB Devices</string>
     <string name="listen_for_usb_devices_description">Show the Android system prompt when a USB device is plugged in.</string>
     <string name="auto_start_usb_label">Auto-start on USB</string>
@@ -181,7 +185,7 @@
     <string name="select_bt_device">Select Bluetooth Device</string>
     <string name="bt_device_not_set">Not set</string>
     <string name="auto_start_wifi_label">Auto-start on WiFi</string>
-    <string name="auto_start_wifi_description">Automatically open Headunit Revived when connected to a specific WiFi SSID.</string>
+    <string name="auto_start_wifi_description">Automatically open HeadUnitLauncher when connected to a specific WiFi SSID.</string>
     <string name="auto_start_wifi_ssid_label">WiFi SSID</string>
     <string name="auto_start_wifi_ssid_description">Connect only when connected to this WiFi SSID</string>
     <string name="auto_start_wifi_warning">Legacy Feature: This may not work reliably on Android 8+ due to background restrictions. Ensure the app is excluded from battery optimization.</string>
@@ -190,8 +194,16 @@
     <string name="bt_permission_denied_title">Bluetooth Permission Required</string>
     <string name="bt_permission_denied_message">Bluetooth permission is required to select paired devices. Please grant it in app settings.</string>
     <string name="overlay_permission_title">Background Start Permission</string>
-    <string name="overlay_permission_description">To allow Headunit Revived to open automatically when Bluetooth connects, please enable the "Display over other apps" permission in the next screen.</string>
+    <string name="overlay_permission_description">To allow HeadUnitLauncher to open automatically when Bluetooth connects, please enable the "Display over other apps" permission in the next screen.</string>
     <string name="open_settings">Settings</string>
+    <string name="set_as_launcher">Set as launcher</string>
+    <string name="launcher_setup_description">Set HeadUnitLauncher as your default Home app to skip opening the stock launcher first.</string>
+    <string name="launcher_settings_hint">Choose HeadUnitLauncher as the default Home app.</string>
+    <string name="launcher_role_enabled">HeadUnitLauncher is ready to use as your Home app.</string>
+    <string name="launcher_prompt_title">Set as default launcher?</string>
+    <string name="launcher_prompt_message">HeadUnitLauncher can open directly when you press Home or start the device. Set it as your default Home app now?</string>
+    <string name="not_now">Not now</string>
+    <string name="never_ask_again">Never ask again</string>
     <string name="right_hand_drive">Right-hand drive</string>
     <string name="right_hand_drive_description">Position UI for right-side driving</string>
     <string name="wireless_connection_settings">Wireless Connection</string>
@@ -274,9 +286,9 @@
     <!-- Info Settings -->
     <string name="category_info">Info</string>
     <string name="about">About &amp; Support</string>
-    <string name="about_description">Get more information about Headunit Revived</string>
+    <string name="about_description">Get more information about HeadUnitLauncher</string>
     <string name="version">Version</string>
-    <string name="about_title">About Headunit Revived</string>
+    <string name="about_title">About HeadUnitLauncher</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
     <!-- Safety Disclaimer -->
@@ -287,7 +299,7 @@
         <b>1. Focus on the Road</b><br/>
         Operating this software while driving can be distracting and dangerous. Always prioritize safe driving and adhere to all local traffic regulations. Use this application only when it is safe to do so.<br/><br/>
         <b>2. Limitation of Liability</b><br/>
-        Headunit Revived is provided "as is" without warranty of any kind. The developers assume no liability for any accidents, damage to your vehicle/device, or legal consequences arising from the use of this software.<br/><br/>
+        HeadUnitLauncher is provided "as is" without warranty of any kind. The developers assume no liability for any accidents, damage to your vehicle/device, or legal consequences arising from the use of this software.<br/><br/>
         <b>3. No Affiliation</b><br/>
         This project is an independent open-source initiative and is not affiliated with, endorsed by, or connected to Google LLC or the Android Auto brand.
     ]]></string>
@@ -335,7 +347,7 @@
     <string name="wifi_disconnect_toast">Android Auto disconnected: If using wireless AA, disable \"Switch between networks\" or \"Network acceleration\" in phone WiFi settings</string>
     <string name="reset_usb_option">Reset USB Connection</string>
     <string name="reset_usb_timeout">USB device not found. Please check connection.</string>
-    <string name="notification_service_running">Headunit Revived is running</string>
+    <string name="notification_service_running">HeadUnitLauncher is running</string>
     <string name="notification_projection_active">Android Auto is projected</string>
     <string name="shortcut_connect_title">Connect</string>
     <string name="shortcut_connect_desc">Auto-connect to last phone</string>

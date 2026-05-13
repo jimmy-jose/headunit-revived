@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Headunit Revived</string>
+    <string name="app_name">HeadUnitLauncher</string>
     <string name="menu">Меню</string>
     <string name="settings">Налаштування</string>
 
@@ -12,7 +12,7 @@
     <string name="video">Android Auto</string>
     <string name="self_mode">Самостійний режим</string>
     <string name="to_android_auto">В Android Auto</string>
-    <string name="title">Headunit Revived</string>
+    <string name="title">HeadUnitLauncher</string>
     <string name="remove">Видалити</string>
     <string name="usb">USB</string>
     <string name="wifi">Wi-Fi</string>
@@ -151,9 +151,9 @@
     <string name="usb_auto_connect">Автопідключення USB</string>
     <string name="usb_auto_connect_description">Автоматично підключатися до відомого USB-пристрою при запуску програми.</string>
     <string name="auto_start_bt_label">Автозапуск при Bluetooth</string>
-    <string name="auto_start_bt_description">Автоматично відкривати Headunit Revived при підключенні певного пристрою Bluetooth.</string>
+    <string name="auto_start_bt_description">Автоматично відкривати HeadUnitLauncher при підключенні певного пристрою Bluetooth.</string>
     <string name="auto_start_wifi_label">Автозапуск через Wi-Fi</string>
-    <string name="auto_start_wifi_description">Автоматично відкривати Headunit Revived при підключенні до певної мережі Wi-Fi (SSID).</string>
+    <string name="auto_start_wifi_description">Автоматично відкривати HeadUnitLauncher при підключенні до певної мережі Wi-Fi (SSID).</string>
     <string name="auto_start_wifi_ssid_label">SSID Wi-Fi</string>
     <string name="auto_start_wifi_ssid_description">Підключатися лише при з\'єднанні з цією мережею Wi-Fi (SSID)</string>
     <string name="auto_start_wifi_warning">Застаріла функція: може працювати нестабільно на Android 8+ через фонові обмеження. Переконайтеся, що додаток виключено з оптимізації батареї.</string>
@@ -176,7 +176,7 @@
     <string name="bt_permission_denied_title">Потрібен дозвіл Bluetooth</string>
     <string name="bt_permission_denied_message">Дозвіл Bluetooth необхідний для вибору сполучених пристроїв. Надайте його в налаштуваннях застосунку.</string>
     <string name="overlay_permission_title">Дозвіл на запуск у фоні</string>
-    <string name="overlay_permission_description">Щоб Headunit Revived міг автоматично відкриватися при підключенні Bluetooth, увімкніть дозвіл "Показувати поверх інших програм" на наступному екрані.</string>
+    <string name="overlay_permission_description">Щоб HeadUnitLauncher міг автоматично відкриватися при підключенні Bluetooth, увімкніть дозвіл "Показувати поверх інших програм" на наступному екрані.</string>
     <string name="open_settings">Налаштування</string>
     <string name="wireless_connection_settings">Бездротове з\'єднання</string>
     <string name="right_hand_drive">Правостороннє керування</string>
@@ -252,9 +252,9 @@
     <!-- Info Settings -->
     <string name="category_info">Інформація</string>
     <string name="about">Про застосунок і підтримка</string>
-    <string name="about_description">Отримати більше інформації про Headunit Revived</string>
+    <string name="about_description">Отримати більше інформації про HeadUnitLauncher</string>
     <string name="version">Версія</string>
-    <string name="about_title">Про Headunit Revived</string>
+    <string name="about_title">Про HeadUnitLauncher</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
     <!-- Safety Disclaimer -->
@@ -265,7 +265,7 @@
         <b>1. Зосередьтеся на дорозі</b><br/>
         Використовувати цю програму за кермом небезпечно. Завжди пріоритизуйте безпечне керування та дотримуйтесь усіх місцевих правил дорожнього руху. Використовуйте це ПЗ лише тоді, коли це безпечно.<br/><br/>
         <b>2. Обмеження відповідальності</b><br/>
-        Headunit Revived надається як є, без будь-яких гарантій. Розробники не несуть відповідальності за будь-які аварії, пошкодження вашого автомобіля або пристрою, а також за будь-які правові наслідки, що можуть виникнути внаслідок використання цього програмного забезпечення.<br/><br/>
+        HeadUnitLauncher надається як є, без будь-яких гарантій. Розробники не несуть відповідальності за будь-які аварії, пошкодження вашого автомобіля або пристрою, а також за будь-які правові наслідки, що можуть виникнути внаслідок використання цього програмного забезпечення.<br/><br/>
         <b>3. Відсутність афілійованості</b><br/>
         Цей проєкт є незалежною ініціативою з відкритим вихідним кодом і не повʼязаний, не схвалений та не має жодного відношення до компанії Google LLC або бренду Android Auto.
     ]]></string>
@@ -313,7 +313,7 @@
     <string name="wifi_disconnect_toast">Android Auto від\'єднано: При бездротовому AA вимкніть \"Перемикання між мережами\" або \"Прискорення мережі\" в налаштуваннях WiFi телефону</string>
     <string name="reset_usb_option">Скинути USB-підключення</string>
     <string name="reset_usb_timeout">USB-пристрій не знайдено. Перевірте підключення.</string>
-    <string name="notification_service_running">Headunit Revived запущено</string>
+    <string name="notification_service_running">HeadUnitLauncher запущено</string>
     <string name="notification_projection_active">Трансляція Android Auto активна</string>
     <string name="shortcut_connect_title">Підключити</string>
     <string name="shortcut_connect_desc">Підключитися до останнього пристрою</string>

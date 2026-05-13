@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Headunit Revived</string>
+    <string name="app_name">HeadUnitLauncher</string>
     <string name="menu">Menü</string>
     <string name="settings">Beállítások</string>
 
@@ -12,7 +12,7 @@
     <string name="video">Android Auto</string>
     <string name="self_mode">Önálló mód</string>
     <string name="to_android_auto">Android Auto-ba</string>
-    <string name="title">Headunit Revived</string>
+    <string name="title">HeadUnitLauncher</string>
     <string name="remove">Eltávolít</string>
     <string name="usb">USB</string>
     <string name="wifi">WiFi</string>
@@ -150,9 +150,9 @@
     <string name="usb_auto_connect">Automatikus USB-csatlakozás</string>
     <string name="usb_auto_connect_description">Az alkalmazás megnyitásakor automatikus csatlakozás egy ismert USB-eszközhöz.</string>
     <string name="auto_start_bt_label">Bluetooth automatikus indítás</string>
-    <string name="auto_start_bt_description">A Headunit Revived automatikus megnyitása, amikor egy adott Bluetooth-eszköz csatlakozik.</string>
+    <string name="auto_start_bt_description">A HeadUnitLauncher automatikus megnyitása, amikor egy adott Bluetooth-eszköz csatlakozik.</string>
     <string name="auto_start_wifi_label">WiFi automatikus indítás</string>
-    <string name="auto_start_wifi_description">A Headunit Revived automatikus megnyitása egy adott WiFi SSID-hez való csatlakozáskor.</string>
+    <string name="auto_start_wifi_description">A HeadUnitLauncher automatikus megnyitása egy adott WiFi SSID-hez való csatlakozáskor.</string>
     <string name="auto_start_wifi_ssid_label">WiFi SSID</string>
     <string name="auto_start_wifi_ssid_description">Csak akkor csatlakozzon, ha ehhez a WiFi SSID-hez kapcsolódik</string>
     <string name="auto_start_wifi_warning">Régi funkció: a háttérbeli korlátozások miatt Android 8+ rendszeren nem biztos, hogy megbízhatóan működik. Győződjön meg róla, hogy az alkalmazás ki van véve az akkumulátor-optimalizálás alól.</string>
@@ -175,7 +175,7 @@
     <string name="bt_permission_denied_title">Bluetooth-engedély szükséges</string>
     <string name="bt_permission_denied_message">A párosított eszközök kiválasztásához Bluetooth-engedély szükséges. Kérjük, engedélyezze az alkalmazás beállításaiban.</string>
     <string name="overlay_permission_title">Háttérben indítás engedélye</string>
-    <string name="overlay_permission_description">Ahhoz, hogy a Headunit Revived automatikusan megnyíljon Bluetooth-csatlakozáskor, engedélyezd a következő képernyőn a „Megjelenítés más alkalmazások felett” jogosultságot.</string>
+    <string name="overlay_permission_description">Ahhoz, hogy a HeadUnitLauncher automatikusan megnyíljon Bluetooth-csatlakozáskor, engedélyezd a következő képernyőn a „Megjelenítés más alkalmazások felett” jogosultságot.</string>
     <string name="open_settings">Beállítások</string>
     <string name="wireless_connection_settings">Vezeték nélküli kapcsolat</string>
     <string name="right_hand_drive">Jobbkormányos vezetés</string>
@@ -251,9 +251,9 @@
     <!-- Info Settings -->
     <string name="category_info">Információ</string>
     <string name="about">Rólunk &amp; támogatás</string>
-    <string name="about_description">További információk a Headunit Revived-ról.</string>
+    <string name="about_description">További információk a HeadUnitLauncher-ról.</string>
     <string name="version">Verzió</string>
-    <string name="about_title">Headunit Revived-ról</string>
+    <string name="about_title">HeadUnitLauncher-ról</string>
     <string name="copyright">© 2025-%d André Rinas</string>
 
     <!-- Safety Disclaimer -->
@@ -264,7 +264,7 @@
         <b>1. Figyelj az útra</b><br/>
         A szoftver használata vezetés közben elvonhatja a figyelmet és veszélyes lehet. Mindig a biztonságos vezetést helyezd előtérbe, és tartsd be a helyi közlekedési szabályokat. Az alkalmazást csak akkor használd, ha az biztonságos.<br/><br/>
         <b>2. Felelősség korlátozása</b><br/>
-        A Headunit Revived „adott állapotában” kerül szolgáltatásra, bármiféle garancia nélkül. A fejlesztők nem vállalnak felelősséget a szoftver használatából eredő balesetekért, a járműben vagy eszközben keletkezett károkért, illetve az esetleges jogi következményekért.<br/><br/>
+        A HeadUnitLauncher „adott állapotában” kerül szolgáltatásra, bármiféle garancia nélkül. A fejlesztők nem vállalnak felelősséget a szoftver használatából eredő balesetekért, a járműben vagy eszközben keletkezett károkért, illetve az esetleges jogi következményekért.<br/><br/>
         <b>3. Nincs kapcsolat</b><br/>
         Ez a projekt egy független, nyílt forráskódú kezdeményezés, mely nem áll kapcsolatban a Google LLC-vel vagy az Android Auto márkával, valamint nem kap tőlük támogatást és nincs jóváhagyva általuk.
     ]]></string>
@@ -310,7 +310,7 @@
     <string name="connection_interrupted">Kapcsolat elveszett</string>
     <string name="connection_interrupted_detail">Újrapróbálkozás…</string>
     <string name="wifi_disconnect_toast">Android Auto leválasztva: Ha vezeték nélküli AA-t használ, tiltsa le a \"Hálózatok közötti váltás\" vagy \"Hálózatgyorsítás\" opciót a telefon WiFi beállításaiban</string>
-    <string name="notification_service_running">Headunit Revived fut</string>
+    <string name="notification_service_running">HeadUnitLauncher fut</string>
     <string name="notification_projection_active">Android Auto kivetítve</string>
     <string name="shortcut_connect_title">Kapcsolódás</string>
     <string name="shortcut_connect_desc">Kapcsolódás az utolsó ismert eszközhöz</string>

@@ -7,9 +7,9 @@
 
 # --- Generated Proto Classes ---
 # Keep all generated protocol buffer classes and their members
--keep class com.andrerinas.headunitrevived.aap.protocol.proto.** { *; }
--keep interface com.andrerinas.headunitrevived.aap.protocol.proto.** { *; }
--keep enum com.andrerinas.headunitrevived.aap.protocol.proto.** { *; }
+-keep class org.xs.headunitlauncher.aap.protocol.proto.** { *; }
+-keep interface org.xs.headunitlauncher.aap.protocol.proto.** { *; }
+-keep enum org.xs.headunitlauncher.aap.protocol.proto.** { *; }
 
 # --- Reflection Targets ---
 # Ensure these system classes are kept and their members are accessible via reflection
@@ -22,15 +22,15 @@
 -keep class androidx.fragment.app.FragmentContainerView { *; }
 
 # Keep all fragments in the main package (referenced in nav_graph.xml)
--keep class com.andrerinas.headunitrevived.main.** { *; }
--keep class com.andrerinas.headunitrevived.main.settings.** { *; }
+-keep class org.xs.headunitlauncher.main.** { *; }
+-keep class org.xs.headunitlauncher.main.settings.** { *; }
 
 # --- App Logic ---
 # Keep specific app classes if needed (e.g. accessed via JNI or reflection)
-# -keep class com.andrerinas.headunitrevived.decoder.** { *; }
+# -keep class org.xs.headunitlauncher.decoder.** { *; }
 
 # --- JNI ---
--keep class com.andrerinas.headunitrevived.aap.AapSslNative { *; }
+-keep class org.xs.headunitlauncher.aap.AapSslNative { *; }
 
 # --- Conscrypt Rules ---
 -dontwarn org.conscrypt.**
