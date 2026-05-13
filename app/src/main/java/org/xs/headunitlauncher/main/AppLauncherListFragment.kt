@@ -1,10 +1,6 @@
 package org.xs.headunitlauncher.main
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.pm.ResolveInfo
-import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -19,8 +15,6 @@ import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.utils.LauncherUtils
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import java.text.Collator
-import java.util.Locale
 
 class AppLauncherListFragment : Fragment() {
 
@@ -41,7 +35,7 @@ class AppLauncherListFragment : Fragment() {
 
         adapter = AppAdapter(requireContext()) { app ->
             try {
-                startActivity(LauncherUtils.createAppDetailsIntent(app.componentName))
+                LauncherUtils.launchApp(requireContext(), app.componentName)
             } catch (e: Exception) {
                 Toast.makeText(requireContext(), R.string.failed_open_app, Toast.LENGTH_SHORT).show()
             }
@@ -68,48 +62,12 @@ class AppLauncherListFragment : Fragment() {
     }
 
     private fun loadApps() {
-        val queryIntent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
-
-        val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            requireContext().packageManager.queryIntentActivities(
-                queryIntent,
-                PackageManager.ResolveInfoFlags.of(0)
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            requireContext().packageManager.queryIntentActivities(queryIntent, 0)
-        }
-
-        val collator = Collator.getInstance(Locale.getDefault())
-        val apps = resolveInfos
-            .asSequence()
-            .filter { it.activityInfo?.packageName != requireContext().packageName }
-            .mapNotNull { it.toLaunchableApp(requireContext()) }
-            .sortedWith(compareBy(collator) { it.label.lowercase(Locale.getDefault()) })
-            .toList()
-
+        val apps = LauncherUtils.queryLaunchableApps(requireContext())
         adapter.setApps(apps)
         val isEmpty = apps.isEmpty()
         recyclerView.visibility = if (isEmpty) View.GONE else View.VISIBLE
         emptyView.visibility = if (isEmpty) View.VISIBLE else View.GONE
     }
-
-    private fun ResolveInfo.toLaunchableApp(context: Context): LaunchableApp? {
-        val activityInfo = activityInfo ?: return null
-        val label = loadLabel(context.packageManager).toString().trim()
-        if (label.isEmpty()) return null
-        return LaunchableApp(
-            label = label,
-            componentName = android.content.ComponentName(activityInfo.packageName, activityInfo.name)
-        )
-    }
-
-    private data class LaunchableApp(
-        val label: String,
-        val componentName: android.content.ComponentName
-    )
 
     private class AppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val launchButton: MaterialButton = itemView.findViewById(R.id.app_launch_button)
@@ -117,9 +75,9 @@ class AppLauncherListFragment : Fragment() {
 
     private class AppAdapter(
         private val context: Context,
-        private val onLaunch: (LaunchableApp) -> Unit
+        private val onLaunch: (LauncherUtils.LaunchableApp) -> Unit
     ) : RecyclerView.Adapter<AppViewHolder>() {
-        private val apps = mutableListOf<LaunchableApp>()
+        private val apps = mutableListOf<LauncherUtils.LaunchableApp>()
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AppViewHolder {
             val view = LayoutInflater.from(context).inflate(R.layout.list_item_app, parent, false)
@@ -145,7 +103,7 @@ class AppLauncherListFragment : Fragment() {
 
         override fun getItemCount(): Int = apps.size
 
-        fun setApps(items: List<LaunchableApp>) {
+        fun setApps(items: List<LauncherUtils.LaunchableApp>) {
             apps.clear()
             apps.addAll(items)
             notifyDataSetChanged()

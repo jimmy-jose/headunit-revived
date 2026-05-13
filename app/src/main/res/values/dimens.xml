@@ -6,4 +6,5 @@
     <dimen name="activity_horizontal_margin">16dp</dimen>
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="list_padding">16dp</dimen>
+    <dimen name="app_drawer_peek_height">74dp</dimen>
 </resources>

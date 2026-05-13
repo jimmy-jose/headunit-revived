@@ -10,6 +10,9 @@
     <string name="ignored">Ignored</string>
     <string name="exit">Exit</string>
     <string name="apps">Apps</string>
+    <string name="connection">Connection</string>
+    <string name="open_app_drawer">Open app drawer</string>
+    <string name="search_apps">Search apps</string>
     <string name="android_settings">Android Settings</string>
     <string name="video">Android Auto</string>
     <string name="self_mode">Self Mode</string>
