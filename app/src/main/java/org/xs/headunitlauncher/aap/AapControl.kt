@@ -85,7 +85,12 @@ internal class AapControlMedia(
             
             addConfigurationIndices(0)
         }.build()
-        AppLog.i("Config response: %s", configResponse)
+        AppLog.i(
+            "Config response: status=%s, maxUnacked=%d, configIndices=%s",
+            configResponse.status,
+            configResponse.maxUnacked,
+            configResponse.configurationIndicesList
+        )
         val msg = AapMessage(channel, Media.MsgType.MEDIA_MESSAGE_CONFIG_VALUE, configResponse)
         aapTransport.send(msg)
 
@@ -121,7 +126,13 @@ internal class AapControlMedia(
     }
 
     private fun micRequest(micRequest: Media.MicrophoneRequest): Int {
-        AppLog.d("Mic request: %s", micRequest)
+        AppLog.d(
+            "Mic request: open=%s, anc=%s, ec=%s, maxUnacked=%d",
+            micRequest.open,
+            micRequest.ancEnabled,
+            micRequest.ecEnabled,
+            micRequest.maxUnacked
+        )
 
         if (micRequest.open) {
             micRecorder.start()

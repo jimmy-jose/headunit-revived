@@ -1,29 +1,15 @@
 # HeadUnitLauncher
 
-<a href='https://play.google.com/store/apps/details?id=com.andrerinas.headunitrevived'><img alt='Get it on Google Play' src='https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png' width="200"/></a>
-<a href='http://www.amazon.com/gp/mas/dl/android?p=com.andrerinas.headunitrevived'><img alt='Available at Amazon Appstore' src='https://images-na.ssl-images-amazon.com/images/G/01/mobile-apps/devportal2/res/images/amazon-appstore-badge-english-black.png' width="200"/></a>
-
-<p align="center">
-    <img src="https://github.com/user-attachments/assets/579b7b03-23e0-4eda-a05d-c51d28a72113"
-    alt="Headunit Logo"
-    height="200">
-</p>
-
 HeadUnitLauncher is an Android app that allows you to turn your Android tablet or phone into an Android Auto receiver. This project is a revived version of the original headunit project by the great Michael Reid. The original project can be found here:
 https://github.com/mikereidis/headunit
 
-## Screenshots
-<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/22abbc13-75d5-436f-b0ae-2e92b7648d50" />
-<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/f81149b3-a844-4657-87d2-a2867a5eb030" />
-<img width="1280" height="800" alt="image" src="https://github.com/user-attachments/assets/140bbfdb-5b4f-4d49-a419-85aa91b48371" />
-
 ## How to use
-**Check out the [Wiki](https://github.com/andreknieriem/headunit-revived/wiki) for detailed documentation, setup guides and troubleshooting!**
+
 
 ### Wired USB Connection
 - Connect your Android device (phone) to the tablet running HeadUnitLauncher via USB cable.
 - Make sure that Android Auto is installed on your phone.
-- Set your phone to Host-Mode if nescessary and select Android Auto
+- Set your phone to Host-Mode if necessary and select Android Auto
 - Click the USB Button in HeadUnitLauncher, find your phone and click the right button to allow connection
 - Click on your phone in the list and wait for Android Auto to start
 
