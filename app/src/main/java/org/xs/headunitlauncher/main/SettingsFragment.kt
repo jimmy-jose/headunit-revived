@@ -90,6 +90,7 @@ class SettingsFragment : Fragment() {
     private var pendingAssistantVolumeOffset: Int? = null
     private var pendingNavigationVolumeOffset: Int? = null
 
+    private var isAdvancedExpanded = false
     private var requiresRestart = false
     private var hasChanges = false
     private val SAVE_ITEM_ID = 1001
@@ -158,6 +159,7 @@ class SettingsFragment : Fragment() {
         pendingMediaVolumeOffset = settings.mediaVolumeOffset
         pendingAssistantVolumeOffset = settings.assistantVolumeOffset
         pendingNavigationVolumeOffset = settings.navigationVolumeOffset
+        isAdvancedExpanded = savedInstanceState?.getBoolean("advanced_expanded") ?: false
 
         // Intercept system back button
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : OnBackPressedCallback(true) {
@@ -187,6 +189,7 @@ class SettingsFragment : Fragment() {
                 outState.putParcelable("recycler_scroll", it)
             }
         }
+        outState.putBoolean("advanced_expanded", isAdvancedExpanded)
     }
 
     private fun setupToolbar() {
@@ -392,10 +395,28 @@ class SettingsFragment : Fragment() {
         val scrollState = settingsRecyclerView.layoutManager?.onSaveInstanceState()
         val items = mutableListOf<SettingItem>()
 
-        // --- General Settings ---
-        items.add(SettingItem.CategoryHeader("general", R.string.category_general))
+        addRegularGeneralSettings(items)
+        addRegularWirelessSettings(items)
+        addRegularDarkModeSettings(items)
+        addRegularInfoSettings(items)
+        addAdvancedSection(items)
 
-        // Auto-Optimize Wizard
+        // Add a dedicated Save button at the bottom if there are changes
+        if (hasChanges) {
+            items.add(SettingItem.ActionButton(
+                stableId = "bottomSaveButton",
+                textResId = if (requiresRestart) R.string.save_and_restart else R.string.save,
+                onClick = { saveSettings() }
+            ))
+        }
+
+        settingsAdapter.submitList(items) {
+            scrollState?.let { settingsRecyclerView.layoutManager?.onRestoreInstanceState(it) }
+        }
+    }
+
+    private fun addRegularGeneralSettings(items: MutableList<SettingItem>) {
+        items.add(SettingItem.CategoryHeader("general", R.string.category_general))
         items.add(SettingItem.SettingEntry(
             stableId = "autoOptimize",
             nameResId = R.string.auto_optimize,
@@ -407,7 +428,6 @@ class SettingsFragment : Fragment() {
             }
         ))
 
-        // Language Selector
         val availableLocales = LocaleHelper.getAvailableLocales(requireContext())
         val currentLocale = LocaleHelper.stringToLocale(pendingAppLanguage ?: "")
         val currentLanguageDisplay = if (currentLocale != null) {
@@ -423,14 +443,11 @@ class SettingsFragment : Fragment() {
             onClick = { _ ->
                 val languageNames = mutableListOf(getString(R.string.system_default))
                 val localeCodes = mutableListOf("")
-
                 availableLocales.forEach { locale ->
                     languageNames.add(LocaleHelper.getDisplayName(locale))
                     localeCodes.add(LocaleHelper.localeToString(locale))
                 }
-
                 val currentIndex = localeCodes.indexOf(pendingAppLanguage ?: "").coerceAtLeast(0)
-
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                     .setTitle(R.string.change_language)
                     .setSingleChoiceItems(languageNames.toTypedArray(), currentIndex) { dialog, which ->
@@ -450,154 +467,74 @@ class SettingsFragment : Fragment() {
             onClick = {
                 try {
                     findNavController().navigate(R.id.action_settingsFragment_to_vehicleInfoFragment)
-                } catch (e: Exception) { }
+                } catch (_: Exception) { }
             }
         ))
+    }
 
-        // UI Scale (example dialog similar to Custom Insets) - appear after vehicle info
-        items.add(SettingItem.SettingEntry(
-            stableId = "uiScale",
-            nameResId = R.string.ui_scale,
-            value = "${getString(R.string.ui_scale_home)}: ${pendingUiScaleHomePercent ?: 100}% · ${getString(R.string.ui_scale_settings)}: ${pendingUiScaleSettingsPercent ?: 100}%",
-            onClick = { _ ->
-                showUiScaleDialog()
-            }
-        ))
-
-        // --- Wireless Connection ---
+    private fun addRegularWirelessSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("wirelessConnection", R.string.category_wireless))
-
-        // Add 2.4GHz Warning Banner
-        items.add(SettingItem.InfoBanner(
-            stableId = "wireless24ghzWarning",
-            textResId = R.string.wireless_24ghz_warning
-        ))
-
-        val wirelessModeOptions = listOf(
-            getString(R.string.wireless_mode_helper),
-            getString(R.string.wireless_mode_native),
-            getString(R.string.wireless_mode_server)
-        )
-
-        val wirelessSelectedIndex = when (pendingWifiConnectionMode) {
-            2 -> 0 // Helper
-            3 -> 1 // Native
-            0, 1 -> 2 // Server
-            else -> 2
-        }
-
-        items.add(SettingItem.SegmentedButtonSettingEntry(
-            stableId = "wifiConnectionMode",
+        val wirelessModes = resources.getStringArray(R.array.wireless_connection_modes)
+        items.add(SettingItem.SettingEntry(
+            stableId = "wifiConnectionModeRegular",
             nameResId = R.string.wireless_mode,
-            options = wirelessModeOptions,
-            selectedIndex = wirelessSelectedIndex,
-            onOptionSelected = { index ->
-                val newMode = when (index) {
-                    0 -> 2 // Helper
-                    1 -> 3 // Native
-                    2 -> if (pendingWifiConnectionMode == 0) 0 else 1 // Keep manual/auto choice if already in server mode
-                    else -> 1
-                }
-
-                if (newMode == 3) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && 
-                        ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                        bluetoothPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
-                    } else {
-                        handleNativeAaSelection()
-                    }
-                } else {
-                    pendingWifiConnectionMode = newMode
-                    checkChanges()
-                    updateSettingsList()
-                }
-            }
-        ))
-
-        // Sub-setting for Headunit Server (Manual vs Auto)
-        if (pendingWifiConnectionMode == 0 || pendingWifiConnectionMode == 1) {
-            items.add(SettingItem.SegmentedButtonSettingEntry(
-                stableId = "serverModeSelection",
-                nameResId = R.string.server_mode_label,
-                options = listOf(getString(R.string.server_mode_manual), getString(R.string.server_mode_auto)),
-                selectedIndex = if (pendingWifiConnectionMode == 0) 0 else 1,
-                onOptionSelected = { index ->
-                    pendingWifiConnectionMode = if (index == 0) 0 else 1
-                    checkChanges()
-                    updateSettingsList()
-                }
-            ))
-
-            // Mode 1 (Auto Server) can also use the auto-hotspot feature
-            if (pendingWifiConnectionMode == 1) {
-                addHotspotToggle(items)
-            }
-        }
-
-        // Sub-setting for Wireless Helper Strategy
-        if (pendingWifiConnectionMode == 2) {
-            val helperStrategies = resources.getStringArray(R.array.helper_strategies)
-            items.add(SettingItem.SettingEntry(
-                stableId = "helperStrategy",
-                nameResId = R.string.helper_strategy_label,
-                value = helperStrategies.getOrElse(pendingHelperConnectionStrategy!!) { "" },
-                onClick = {
-                    MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
-                        .setTitle(R.string.helper_strategy_label)
-                        .setSingleChoiceItems(helperStrategies, pendingHelperConnectionStrategy!!) { dialog, which ->
-                            pendingHelperConnectionStrategy = which
+            value = wirelessModes.getOrElse(pendingWifiConnectionMode ?: 0) { "" },
+            onClick = { _ ->
+                MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+                    .setTitle(R.string.wireless_mode)
+                    .setSingleChoiceItems(wirelessModes, pendingWifiConnectionMode ?: 0) { dialog, which ->
+                        dialog.dismiss()
+                        if (which == 3) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                                ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                                bluetoothPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
+                            } else {
+                                handleNativeAaSelection()
+                            }
+                        } else {
+                            pendingWifiConnectionMode = which
                             checkChanges()
-                            dialog.dismiss()
                             updateSettingsList()
                         }
-                        .show()
-                }
-            ))
-
-            // Mode 2 only shows Hotspot toggle for Strategy 4 (Headunit Hotspot)
-            if (pendingHelperConnectionStrategy == 4) {
-                addHotspotToggle(items)
+                    }
+                    .show()
             }
+        ))
 
-            if (pendingHelperConnectionStrategy == 1) { // WiFi Direct (P2P)
-                items.add(SettingItem.ToggleSettingEntry(
-                    stableId = "waitForWifi",
-                    nameResId = R.string.wait_for_wifi,
-                    descriptionResId = R.string.wait_for_wifi_description,
-                    isChecked = pendingWaitForWifi ?: false,
-                    onCheckedChanged = { isChecked ->
-                        pendingWaitForWifi = isChecked
+        val helperStrategies = resources.getStringArray(R.array.helper_strategies)
+        val helperValue = if (pendingWifiConnectionMode == 2) {
+            helperStrategies.getOrElse(pendingHelperConnectionStrategy ?: 0) { "" }
+        } else {
+            getString(R.string.helper_connection_unavailable)
+        }
+        items.add(SettingItem.SettingEntry(
+            stableId = "helperStrategyRegular",
+            nameResId = R.string.helper_strategy_label,
+            value = helperValue,
+            onClick = { _ ->
+                if (pendingWifiConnectionMode != 2) {
+                    Toast.makeText(requireContext(), R.string.helper_connection_unavailable, Toast.LENGTH_SHORT).show()
+                    return@SettingEntry
+                }
+                MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+                    .setTitle(R.string.helper_strategy_label)
+                    .setSingleChoiceItems(helperStrategies, pendingHelperConnectionStrategy ?: 0) { dialog, which ->
+                        pendingHelperConnectionStrategy = which
                         checkChanges()
+                        dialog.dismiss()
                         updateSettingsList()
                     }
-                ))
-
-                if (pendingWaitForWifi == true) {
-                    items.add(SettingItem.SliderSettingEntry(
-                        stableId = "waitForWifiTimeout",
-                        nameResId = R.string.wait_for_wifi_timeout,
-                        value = "${pendingWaitForWifiTimeout}s",
-                        sliderValue = (pendingWaitForWifiTimeout ?: 10).toFloat(),
-                        valueFrom = 5f,
-                        valueTo = 30f,
-                        stepSize = 1f,
-                        onValueChanged = { value ->
-                            pendingWaitForWifiTimeout = value.toInt()
-                            checkChanges()
-                            updateSettingsList()
-                        }
-                    ))
-                }
+                    .show()
             }
-        }
+        ))
+    }
 
-        // --- Dark Mode ---
+    private fun addRegularDarkModeSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("darkMode", R.string.category_dark_mode))
-
         val appThemeTitles = resources.getStringArray(R.array.app_theme)
         val nightModeTitles = resources.getStringArray(R.array.night_mode)
         val darkModeValue = "${getString(R.string.app_theme_short)}: ${appThemeTitles[settings.appTheme.value]} · " +
-                "${getString(R.string.night_mode_short)}: ${nightModeTitles[settings.nightMode.value]}"
+            "${getString(R.string.night_mode_short)}: ${nightModeTitles[settings.nightMode.value]}"
         items.add(SettingItem.SettingEntry(
             stableId = "darkModeSettings",
             nameResId = R.string.dark_mode_settings,
@@ -605,15 +542,71 @@ class SettingsFragment : Fragment() {
             onClick = {
                 try {
                     findNavController().navigate(R.id.action_settingsFragment_to_darkModeFragment)
-                } catch (e: Exception) {
-                    // Failover
-                }
+                } catch (_: Exception) { }
+            }
+        ))
+    }
+
+    private fun addRegularInfoSettings(items: MutableList<SettingItem>) {
+        items.add(SettingItem.CategoryHeader("info", R.string.category_info))
+        items.add(SettingItem.SettingEntry(
+            stableId = "version",
+            nameResId = R.string.version,
+            value = BuildConfig.VERSION_NAME,
+            onClick = { }
+        ))
+        items.add(SettingItem.SettingEntry(
+            stableId = "about",
+            nameResId = R.string.about,
+            value = getString(R.string.about_description),
+            onClick = {
+                try {
+                    findNavController().navigate(R.id.action_settingsFragment_to_aboutFragment)
+                } catch (_: Exception) { }
+            }
+        ))
+    }
+
+    private fun addAdvancedSection(items: MutableList<SettingItem>) {
+        items.add(SettingItem.CategoryHeader("advanced", R.string.advanced_settings))
+        items.add(SettingItem.SettingEntry(
+            stableId = "advancedToggle",
+            nameResId = R.string.advanced_settings,
+            value = if (isAdvancedExpanded) getString(R.string.advanced_settings_expanded) else getString(R.string.advanced_settings_collapsed),
+            onClick = { _ ->
+                isAdvancedExpanded = !isAdvancedExpanded
+                updateSettingsList()
             }
         ))
 
-        // --- Automation ---
-        items.add(SettingItem.CategoryHeader("automation", R.string.category_automation))
+        if (!isAdvancedExpanded) return
 
+        addAdvancedWirelessSettings(items)
+        addAdvancedAutomationSettings(items)
+        addAdvancedNavigationSettings(items)
+        addAdvancedGraphicSettings(items)
+        addAdvancedVideoSettings(items)
+        addAdvancedInputSettings(items)
+        addAdvancedAudioSettings(items)
+        addAdvancedDebugSettings(items)
+    }
+
+    private fun addAdvancedWirelessSettings(items: MutableList<SettingItem>) {
+        items.add(SettingItem.CategoryHeader("advancedWireless", R.string.category_wireless))
+        items.add(SettingItem.SettingEntry(
+            stableId = "wirelessAdvancedSettings",
+            nameResId = R.string.wireless_advanced_settings,
+            value = getString(R.string.wireless_advanced_settings_description),
+            onClick = {
+                try {
+                    findNavController().navigate(R.id.action_settingsFragment_to_wirelessConnectionFragment)
+                } catch (_: Exception) { }
+            }
+        ))
+    }
+
+    private fun addAdvancedAutomationSettings(items: MutableList<SettingItem>) {
+        items.add(SettingItem.CategoryHeader("automation", R.string.category_automation))
         items.add(SettingItem.SettingEntry(
             stableId = "autoStartSettings",
             nameResId = R.string.auto_start_settings,
@@ -621,10 +614,9 @@ class SettingsFragment : Fragment() {
             onClick = {
                 try {
                     findNavController().navigate(R.id.action_settingsFragment_to_autoStartFragment)
-                } catch (e: Exception) { }
+                } catch (_: Exception) { }
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "autoConnectSettings",
             nameResId = R.string.auto_connect_settings,
@@ -632,10 +624,9 @@ class SettingsFragment : Fragment() {
             onClick = {
                 try {
                     findNavController().navigate(R.id.action_settingsFragment_to_autoConnectFragment)
-                } catch (e: Exception) { }
+                } catch (_: Exception) { }
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "killOnDisconnect",
             nameResId = R.string.kill_on_disconnect,
@@ -662,10 +653,10 @@ class SettingsFragment : Fragment() {
                 }
             }
         ))
+    }
 
-        // --- Navigation Settings ---
+    private fun addAdvancedNavigationSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("navigation", R.string.category_navigation))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "gpsNavigation",
             nameResId = R.string.gps_for_navigation,
@@ -677,7 +668,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "showNavigationNotifications",
             nameResId = R.string.show_navigation_notifications,
@@ -689,7 +679,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "fakeSpeed",
             nameResId = R.string.fake_speed_title,
@@ -701,10 +690,16 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
+    }
 
-        // --- Graphic Settings ---
+    private fun addAdvancedGraphicSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("graphic", R.string.category_graphic))
-
+        items.add(SettingItem.SettingEntry(
+            stableId = "uiScale",
+            nameResId = R.string.ui_scale,
+            value = "${getString(R.string.ui_scale_home)}: ${pendingUiScaleHomePercent ?: 100}% · ${getString(R.string.ui_scale_settings)}: ${pendingUiScaleSettingsPercent ?: 100}%",
+            onClick = { _ -> showUiScaleDialog() }
+        ))
         items.add(SettingItem.SettingEntry(
             stableId = "resolution",
             nameResId = R.string.resolution,
@@ -721,7 +716,6 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "dpiPixelDensity",
             nameResId = R.string.dpi,
@@ -739,16 +733,12 @@ class SettingsFragment : Fragment() {
                 )
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "customInsets",
             nameResId = R.string.custom_insets,
             value = "${pendingInsetLeft ?: 0}, ${pendingInsetTop ?: 0}, ${pendingInsetRight ?: 0}, ${pendingInsetBottom ?: 0}",
-            onClick = {
-                showCustomInsetsDialog()
-            }
+            onClick = { showCustomInsetsDialog() }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "startInFullscreenMode",
             nameResId = R.string.start_in_fullscreen_mode,
@@ -771,23 +761,17 @@ class SettingsFragment : Fragment() {
                     .setSingleChoiceItems(modes, pendingFullscreenMode?.value ?: 0) { dialog, which ->
                         val newMode = Settings.FullscreenMode.fromInt(which) ?: Settings.FullscreenMode.NONE
                         pendingFullscreenMode = newMode
-                        
-                        // PERSIST IMMEDIATELY (Rescue Mode)
                         settings.fullscreenMode = newMode
                         settings.commit()
-                        
                         checkChanges()
                         dialog.dismiss()
                         updateSettingsList()
-                        
-                        // Apply immediately to current UI
                         requireActivity().recreate()
                     }
                     .setNegativeButton(R.string.cancel, null)
                     .show()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "viewMode",
             nameResId = R.string.view_mode,
@@ -811,7 +795,6 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "screenOrientation",
             nameResId = R.string.screen_orientation,
@@ -821,19 +804,15 @@ class SettingsFragment : Fragment() {
                 val currentIdx = pendingScreenOrientation!!.value
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                     .setTitle(R.string.change_screen_orientation)
-                    .setSingleChoiceItems(orientationOptions, currentIdx) { dialog, whiches ->
-                        val newOrientation = Settings.ScreenOrientation.fromInt(whiches) ?: Settings.ScreenOrientation.SYSTEM
+                    .setSingleChoiceItems(orientationOptions, currentIdx) { dialog, which ->
+                        val newOrientation = Settings.ScreenOrientation.fromInt(which) ?: Settings.ScreenOrientation.SYSTEM
                         pendingScreenOrientation = newOrientation
-                        
-                        // Apply immediately
                         settings.screenOrientation = newOrientation
                         settings.commit()
-                        
                         requireActivity().requestedOrientation = newOrientation.androidOrientation
                         requireContext().sendBroadcast(Intent(AapService.ACTION_ORIENTATION_CHANGED).apply {
                             setPackage(requireContext().packageName)
                         })
-                        
                         checkChanges()
                         dialog.dismiss()
                         updateSettingsList()
@@ -841,8 +820,6 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
-
-        // Add the toggle for Stretch to Fill
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "stretchToFill",
             nameResId = R.string.pref_stretch_screen_title,
@@ -850,12 +827,11 @@ class SettingsFragment : Fragment() {
             isChecked = pendingStretchToFill!!,
             onCheckedChanged = { isChecked ->
                 pendingStretchToFill = isChecked
-                requiresRestart = true // Requires a reconnect to apply the new rendering bounds
+                requiresRestart = true
                 checkChanges()
                 updateSettingsList()
             }
         ))
-
         if (pendingViewMode == Settings.ViewMode.SURFACE) {
             items.add(SettingItem.ToggleSettingEntry(
                 stableId = "forcedScale",
@@ -870,10 +846,10 @@ class SettingsFragment : Fragment() {
                 }
             ))
         }
+    }
 
-        // --- Video Settings ---
+    private fun addAdvancedVideoSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("video", R.string.category_video))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "forceSoftwareDecoding",
             nameResId = R.string.force_software_decoding,
@@ -885,7 +861,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "videoCodec",
             nameResId = R.string.video_codec,
@@ -904,7 +879,6 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "fpsLimit",
             nameResId = R.string.fps_limit,
@@ -923,10 +897,10 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
+    }
 
-        // --- Input Settings ---
+    private fun addAdvancedInputSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("input", R.string.category_input))
-
         items.add(SettingItem.SettingEntry(
             stableId = "keymap",
             nameResId = R.string.keymap,
@@ -934,12 +908,9 @@ class SettingsFragment : Fragment() {
             onClick = { _ ->
                 try {
                     findNavController().navigate(R.id.action_settingsFragment_to_keymapFragment)
-                } catch (e: Exception) {
-                    // Failover
-                }
+                } catch (_: Exception) { }
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "enableRotary",
             nameResId = R.string.enable_rotary,
@@ -951,10 +922,10 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
+    }
 
-        // --- Audio Settings ---
+    private fun addAdvancedAudioSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("audio", R.string.category_audio))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "enableAudioSink",
             nameResId = R.string.enable_audio_sink,
@@ -966,7 +937,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "separateAudioStreams",
             nameResId = R.string.separate_audio_streams,
@@ -978,7 +948,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "useAacAudio",
             nameResId = R.string.use_aac_audio,
@@ -990,7 +959,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "syncMediaSessionAaMetadata",
             nameResId = R.string.sync_media_session_aa_metadata,
@@ -1002,25 +970,18 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "micSettings",
             nameResId = R.string.microphone_settings,
             value = getString(R.string.microphone_settings_description),
-            onClick = { _ ->
-                findNavController().navigate(R.id.action_settingsFragment_to_micSettingsFragment)
-            }
+            onClick = { _ -> findNavController().navigate(R.id.action_settingsFragment_to_micSettingsFragment) }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "audioVolumeOffsets",
             nameResId = R.string.audio_volume_offset,
             value = "${(100 + (pendingMediaVolumeOffset ?: 0))}% / ${(100 + (pendingAssistantVolumeOffset ?: 0))}% / ${(100 + (pendingNavigationVolumeOffset ?: 0))}%",
-            onClick = {
-                showAudioOffsetsDialog()
-            }
+            onClick = { showAudioOffsetsDialog() }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "audioLatencyMultiplier",
             nameResId = R.string.audio_latency_multiplier,
@@ -1040,7 +1001,6 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "audioQueueCapacity",
             nameResId = R.string.audio_queue_capacity,
@@ -1060,10 +1020,10 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
+    }
 
-        // --- Debug Settings ---
+    private fun addAdvancedDebugSettings(items: MutableList<SettingItem>) {
         items.add(SettingItem.CategoryHeader("debug", R.string.category_debug))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "showFpsCounter",
             nameResId = R.string.show_fps_counter,
@@ -1075,7 +1035,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         val logLevels = LogExporter.LogLevel.entries
         val logLevelNames = logLevels.map { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }.toTypedArray()
         items.add(SettingItem.SettingEntry(
@@ -1101,7 +1060,6 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "captureLog",
             nameResId = if (LogExporter.isCapturing) R.string.stop_log_capture else R.string.start_log_capture,
@@ -1117,7 +1075,6 @@ class SettingsFragment : Fragment() {
                     Toast.makeText(context, getString(R.string.start_log_capture_in_silent), Toast.LENGTH_LONG).show()
                     return@SettingEntry
                 }
-
                 if (LogExporter.isCapturing) {
                     LogExporter.stopCapture()
                     settings.exporterCaptureEnabled = false
@@ -1128,7 +1085,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
         items.add(SettingItem.SettingEntry(
             stableId = "exportLogs",
             nameResId = R.string.export_logs,
@@ -1140,13 +1096,11 @@ class SettingsFragment : Fragment() {
                     Toast.makeText(context, getString(R.string.failed_export_in_silent_logs), Toast.LENGTH_LONG).show()
                     return@SettingEntry
                 }
-
                 if (LogExporter.isCapturing) {
                     LogExporter.stopCapture()
                 }
                 val logFile = LogExporter.saveLogToPublicFile(context, exporterLevel)
                 updateSettingsList()
-
                 if (logFile != null) {
                     MaterialAlertDialogBuilder(context, R.style.DarkAlertDialog)
                         .setTitle(R.string.logs_exported)
@@ -1163,7 +1117,6 @@ class SettingsFragment : Fragment() {
                 }
             }
         ))
-
         items.add(SettingItem.ToggleSettingEntry(
             stableId = "useNativeSsl",
             nameResId = R.string.use_native_ssl,
@@ -1175,42 +1128,6 @@ class SettingsFragment : Fragment() {
                 updateSettingsList()
             }
         ))
-
-        // --- Info Settings ---
-        items.add(SettingItem.CategoryHeader("info", R.string.category_info))
-
-        items.add(SettingItem.SettingEntry(
-            stableId = "version",
-            nameResId = R.string.version,
-            value = BuildConfig.VERSION_NAME,
-            onClick = { /* Read only */ }
-        ))
-
-        items.add(SettingItem.SettingEntry(
-            stableId = "about",
-            nameResId = R.string.about,
-            value = getString(R.string.about_description),
-            onClick = {
-                try {
-                    findNavController().navigate(R.id.action_settingsFragment_to_aboutFragment)
-                } catch (e: Exception) {
-                    // Failover
-                }
-            }
-        ))
-
-        // Add a dedicated Save button at the bottom if there are changes
-        if (hasChanges) {
-            items.add(SettingItem.ActionButton(
-                stableId = "bottomSaveButton",
-                textResId = if (requiresRestart) R.string.save_and_restart else R.string.save,
-                onClick = { saveSettings() }
-            ))
-        }
-
-        settingsAdapter.submitList(items) {
-            scrollState?.let { settingsRecyclerView.layoutManager?.onRestoreInstanceState(it) }
-        }
     }
 
     private fun showAudioOffsetsDialog() {

@@ -382,6 +382,9 @@
     <string name="setup_widescreen_detected">Widescreen display detected.</string>
     <string name="auto_optimize">Auto-Optimize Settings</string>
     <string name="auto_optimize_desc">Run the system check to find the best settings for your device.</string>
+    <string name="advanced_settings">Advanced</string>
+    <string name="advanced_settings_collapsed">Tap to show advanced settings</string>
+    <string name="advanced_settings_expanded">Tap to hide advanced settings</string>
 
     <!-- Navigation notifications (from any AA nav app) -->
     <string name="show_navigation_notifications">Navigation notifications</string>
@@ -493,6 +496,9 @@
     <string name="server_mode_auto">Auto</string>
 
     <string name="helper_strategy_label">Helper Connection Strategy</string>
+    <string name="helper_connection_unavailable">Only used in Wireless Helper mode</string>
+    <string name="wireless_advanced_settings">Wireless Advanced</string>
+    <string name="wireless_advanced_settings_description">Hotspot, Wi-Fi Direct, Native AA, and other advanced wireless options</string>
     <string-array name="helper_strategies">
         <item>Common Wifi (NSD)</item>
         <item>WiFi Direct (P2P)</item>

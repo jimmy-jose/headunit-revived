@@ -350,10 +350,10 @@ class HomeFragment : Fragment() {
     }
 
     private val originalBackgrounds = mapOf(
-        R.id.self_mode_button to R.drawable.gradient_blue,
-        R.id.usb_button to R.drawable.gradient_orange,
-        R.id.wifi_button to R.drawable.gradient_purple,
-        R.id.settings_button to R.drawable.gradient_darkblue
+        R.id.self_mode_button to R.drawable.gradient_teal,
+        R.id.usb_button to R.drawable.gradient_rust,
+        R.id.wifi_button to R.drawable.gradient_rose,
+        R.id.settings_button to R.drawable.gradient_olive
     )
 
     private fun applyMonochromeStyle() {
