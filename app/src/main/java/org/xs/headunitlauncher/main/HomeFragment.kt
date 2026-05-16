@@ -3,6 +3,7 @@ package org.xs.headunitlauncher.main
 import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbManager
+import android.view.inputmethod.InputMethodManager
 import android.os.Bundle
 import android.graphics.Color
 import android.content.res.ColorStateList
@@ -22,7 +23,6 @@ import android.os.Build
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
-import androidx.core.widget.NestedScrollView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
@@ -98,7 +98,6 @@ class HomeFragment : Fragment() {
     private lateinit var clockTimeText: TextView
     private lateinit var clockDayText: TextView
     private lateinit var clockDateText: TextView
-    private lateinit var homeContentScroll: NestedScrollView
     private lateinit var appDrawerSheet: View
     private lateinit var appDrawerHandle: View
     private lateinit var appDrawerContent: View
@@ -145,7 +144,6 @@ class HomeFragment : Fragment() {
         clockTimeText = view.findViewById(R.id.clock_time_text)
         clockDayText = view.findViewById(R.id.clock_day_text)
         clockDateText = view.findViewById(R.id.clock_date_text)
-        homeContentScroll = view.findViewById(R.id.home_content_scroll)
         appDrawerSheet = view.findViewById(R.id.app_drawer_sheet)
         appDrawerHandle = view.findViewById(R.id.app_drawer_handle)
         appDrawerContent = view.findViewById(R.id.app_drawer_content)
@@ -536,6 +534,7 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        hideKeyboard()
         AppLog.i("HomeFragment: onResume. isConnected=${commManager.isConnected}")
         updateProjectionButtonText()
         updateLauncherUi()
@@ -544,6 +543,13 @@ class HomeFragment : Fragment() {
         updateNativeWirelessWarning()
         updateButtonStyle()
         updateTextColors()
+    }
+
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        val targetView = view ?: requireActivity().currentFocus ?: return
+        imm?.hideSoftInputFromWindow(targetView.windowToken, 0)
+        targetView.clearFocus()
     }
 
     private fun updateNativeWirelessWarning() {
@@ -796,7 +802,6 @@ class HomeFragment : Fragment() {
         updateDrawerBackground(isExpanded)
         appDrawerChevron.rotation = if (isExpanded) 180f else 0f
         if (isExpanded) {
-            homeContentScroll.smoothScrollTo(0, 0)
             appDrawerSearchInput.requestFocus()
         } else {
             appDrawerSearchInput.clearFocus()

@@ -15,6 +15,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.aap.AapProjectionActivity
@@ -125,6 +127,7 @@ class MainActivity : BaseActivity() {
         }
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        applySafeAreaPadding()
 
         val appSettings = Settings(this)
         requestedOrientation = appSettings.screenOrientation.androidOrientation
@@ -191,6 +194,27 @@ class MainActivity : BaseActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         isRecreateReceiverRegistered = true
+    }
+
+    private fun applySafeAreaPadding() {
+        val root = findViewById<View>(R.id.root) ?: return
+        val initialStart = root.paddingStart
+        val initialTop = root.paddingTop
+        val initialEnd = root.paddingEnd
+        val initialBottom = root.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(
+                WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.navigationBars()
+            )
+            view.setPadding(
+                initialStart + systemBars.left,
+                initialTop + systemBars.top,
+                initialEnd + systemBars.right,
+                initialBottom + systemBars.bottom
+            )
+            insets
+        }
     }
 
     private fun showSplashWithDelay(delayMs: Long) {

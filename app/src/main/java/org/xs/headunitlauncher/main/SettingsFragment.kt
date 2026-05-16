@@ -572,7 +572,7 @@ class SettingsFragment : Fragment() {
             }
         ))
 
-        if (selectedMode == 2 && (pendingHelperConnectionStrategy ?: 0) == 1) {
+        if (selectedMode == 2 && deviceSupportsWifiDirect() && (pendingHelperConnectionStrategy ?: 0) == 1) {
             items.add(SettingItem.ActionButton(
                 stableId = "broadcastWifiDirectName",
                 textResId = R.string.broadcast_wifi_direct_name,
@@ -678,9 +678,11 @@ class SettingsFragment : Fragment() {
 
     private fun showWifiDirectBroadcastDialog() {
         if (wifiDirectBroadcastDialog?.isShowing == true) return
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialog_wifi_direct_broadcast_progress, null)
         wifiDirectBroadcastDialog = MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
             .setTitle(R.string.broadcast_wifi_direct_name)
-            .setMessage(R.string.broadcast_wifi_direct_name_waiting)
+            .setView(dialogView)
             .setNegativeButton(android.R.string.cancel) { _, _ ->
                 wifiDirectNameBroadcastManager?.stop()
             }

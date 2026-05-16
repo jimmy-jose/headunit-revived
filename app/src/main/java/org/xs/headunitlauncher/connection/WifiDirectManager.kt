@@ -341,6 +341,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     fun makeVisible() {
         val mgr = manager ?: return
         val ch = channel ?: return
+        val helperDeviceName = "HUL"
 
         // Ensure WiFi is enabled (Required for P2P)
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
@@ -350,11 +351,18 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             return
         }
 
+        // Publish the helper-side Wi-Fi Direct name immediately so the UI can show it
+        // even before Android delivers a later THIS_DEVICE_CHANGED callback.
+        AapService.wifiDirectName.value = helperDeviceName
+
         // Reflection Hack to set name
         try {
             val method = mgr.javaClass.getMethod("setDeviceName", WifiP2pManager.Channel::class.java, String::class.java, WifiP2pManager.ActionListener::class.java)
-            method.invoke(mgr, ch, "HURev", object : WifiP2pManager.ActionListener {
-                override fun onSuccess() { AppLog.i("WifiDirectManager: Name set to HURev") }
+            method.invoke(mgr, ch, helperDeviceName, object : WifiP2pManager.ActionListener {
+                override fun onSuccess() {
+                    AppLog.i("WifiDirectManager: Name set to $helperDeviceName")
+                    AapService.wifiDirectName.value = helperDeviceName
+                }
                 override fun onFailure(reason: Int) {}
             })
         } catch (e: Exception) {}
