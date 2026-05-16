@@ -1,4 +1,6 @@
-include(":app", ":contract")
+include(":app", ":contract", ":headunitlauncher-helper-app")
+
+project(":headunitlauncher-helper-app").projectDir = file("headunitlauncher-helper/app")
 
 
 rootProject.name = "headunit"

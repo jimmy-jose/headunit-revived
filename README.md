@@ -12,16 +12,16 @@ https://github.com/mikereidis/headunit
 - Click the USB Button in HeadUnitLauncher, find your phone and click the right button to allow connection
 - Click on your phone in the list and wait for Android Auto to start
 
-### Wireless Helper (Recommended)
+### HeadUnitLauncher Helper (Recommended)
 This is the most reliable way to connect wirelessly. It uses our companion app on your phone to trigger the connection.
 
-- **Download:** [Wireless Helper on Google Play Store](https://play.google.com/store/apps/details?id=com.andrerinas.wirelesshelper)
+- **Download:** [HeadUnitLauncher Helper on Google Play Store](https://play.google.com/store/apps/details?id=org.xs.hulhelper)
 - **Features:** Minimal configuration, supports NSD, Wi-Fi Direct Auto-Connect, and Bluetooth Auto-Start.
 
 **Setup:**
 - In HeadUnitLauncher Settings: Set **Wireless Mode** to **Helper Mode**.
 - Ensure both devices are in the same network (Hotspot or WiFi).
-- Open the Wireless Helper app on your phone and start the service.
+- Open the HeadUnitLauncher Helper app on your phone and start the service.
 - The helper will find your head unit and initiate the connection automatically.
 
 ### Legacy Wireless Options
@@ -52,6 +52,20 @@ adb shell am start -a android.intent.action.VIEW -d "headunit://connect?ip=192.1
 - **Self-mode on Android 10 (Q) and below:** Google has disabled the automatic wireless projection startup for Android 10 and below in Android Auto versions 16.4 and higher. While Self-mode still work on newer Android versions, it is currently impossible to trigger projection on Android 10 with recent Google app updates.
 
 ## Contributing
+
+## Android Studio Workspace
+
+This repository can now be opened as a single Android Studio workspace with both apps:
+
+- `:app` for HeadUnitLauncher
+- `:headunitlauncher-helper-app` for HeadUnitLauncher Helper
+
+Helpful Gradle tasks:
+
+- `./gradlew assembleHeadunitGithubDebug`
+- `./gradlew installHeadunitGithubDebug`
+- `./gradlew assembleHeadunitLauncherHelperDebug`
+- `./gradlew installHeadunitLauncherHelperDebug`
 
 Creating release apk needs a keystore file. You can create your own keystore file using the following command in root folder:
 `keytool -genkey -v -keystore headunit-release-key.jks -alias headunit-revived -keyalg RSA -keysize 2048 -validity 10000`

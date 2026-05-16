@@ -10,3 +10,26 @@ buildscript {
     }
 }
 
+tasks.register("assembleHeadunitGithubDebug") {
+    group = "build"
+    description = "Assembles the Headunit Launcher GitHub debug APK."
+    dependsOn(":app:assembleGithubDebug")
+}
+
+tasks.register("installHeadunitGithubDebug") {
+    group = "installation"
+    description = "Installs the Headunit Launcher GitHub debug APK on a connected device."
+    dependsOn(":app:installGithubDebug")
+}
+
+tasks.register("assembleHeadunitLauncherHelperDebug") {
+    group = "build"
+    description = "Assembles the HeadUnitLauncher Helper debug APK."
+    dependsOn(":headunitlauncher-helper-app:assembleDebug")
+}
+
+tasks.register("installHeadunitLauncherHelperDebug") {
+    group = "installation"
+    description = "Installs the HeadUnitLauncher Helper debug APK on a connected device."
+    dependsOn(":headunitlauncher-helper-app:installDebug")
+}

@@ -1367,9 +1367,9 @@ class AapService : Service(), UsbReceiver.Listener {
                     }
                     3, 4 -> { /* Host/Passive - just wait for connection on WirelessServer port */ }
                 }
-                
-                // Hotspot logic for Helper mode if enabled
-                if (settings.autoEnableHotspot) {
+
+                // Only hotspot-based helper strategies should touch hotspot state.
+                if (settings.autoEnableHotspot && (strategy == 3 || strategy == 4)) {
                     Thread {
                         AppLog.i("AapService: Auto-enabling hotspot for Helper mode...")
                         HotspotManager.setHotspotEnabled(this, true)
@@ -1567,11 +1567,20 @@ class AapService : Service(), UsbReceiver.Listener {
                 val settings = App.provide(this).settings
                 val mode = settings.wifiConnectionMode
                 val strategy = settings.helperConnectionStrategy
-                
+
                 // [FIX] Reset exit flags on manual scan start
                 userExitedAA = false
                 userExitCooldownUntil = 0L
-                initWifiMode(force = true)
+
+                val shouldReinitialize = activeWifiMode != mode ||
+                    activeHelperStrategy != strategy ||
+                    wirelessServer == null
+
+                if (shouldReinitialize) {
+                    initWifiMode(force = true)
+                } else {
+                    AppLog.d("AapService: Reusing existing WiFi Mode $mode (Strategy: $strategy) for manual scan.")
+                }
 
                 if (mode == 2 && strategy == 2) {
                     AppLog.i("AapService: Force-starting Nearby discovery from UI")

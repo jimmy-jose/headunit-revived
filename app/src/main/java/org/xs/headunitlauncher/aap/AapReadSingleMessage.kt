@@ -36,7 +36,7 @@ internal class AapReadSingleMessage(connection: AccessoryConnection, ssl: AapSsl
             // Immediate check for Magic Garbage in the header bytes.
             // This is the most reliable path for intentional disconnects from the Helper.
             if (isMagicGarbage(recvHeader.buf, 0, recvHeader.buf.size)) {
-                AppLog.i("AapRead: Magic Garbage detected in header. Clean disconnect.")
+                AppLog.i("AapRead: Magic Garbage detected in header (${recvHeader.buf.toDebugHex(16)}). Clean disconnect.")
                 return -2
             }
 
@@ -95,4 +95,8 @@ internal class AapReadSingleMessage(connection: AccessoryConnection, ssl: AapSsl
         }
         return true
     }
+
+    private fun ByteArray.toDebugHex(maxBytes: Int): String =
+        take(maxBytes.coerceAtMost(size))
+            .joinToString(" ") { "%02X".format(it.toInt() and 0xFF) }
 }

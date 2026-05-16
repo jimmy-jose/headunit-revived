@@ -44,7 +44,7 @@ class NearbyManager(
     }
 
     private val connectionsClient = Nearby.getConnectionsClient(context)
-    private val SERVICE_ID = "com.andrerinas.hurev"
+    private val SERVICE_ID = "org.xs.hulhelper"
     private val STRATEGY = Strategy.P2P_POINT_TO_POINT
     private var isRunning = false
     private var isConnecting = false
