@@ -12,16 +12,16 @@ https://github.com/mikereidis/headunit
 - Click the USB Button in HeadUnitLauncher, find your phone and click the right button to allow connection
 - Click on your phone in the list and wait for Android Auto to start
 
-### HeadUnitLauncher Helper (Recommended)
+### HeadUnit Helper (Recommended)
 This is the most reliable way to connect wirelessly. It uses our companion app on your phone to trigger the connection.
 
-- **Download:** [HeadUnitLauncher Helper on Google Play Store](https://play.google.com/store/apps/details?id=org.xs.hulhelper)
+- **Download:** [HeadUnit Helper on Google Play Store](https://play.google.com/store/apps/details?id=org.xs.hulhelper)
 - **Features:** Minimal configuration, supports NSD, Wi-Fi Direct Auto-Connect, and Bluetooth Auto-Start.
 
 **Setup:**
 - In HeadUnitLauncher Settings: Set **Wireless Mode** to **Helper Mode**.
 - Ensure both devices are in the same network (Hotspot or WiFi).
-- Open the HeadUnitLauncher Helper app on your phone and start the service.
+- Open the HeadUnit Helper app on your phone and start the service.
 - The helper will find your head unit and initiate the connection automatically.
 
 ### Legacy Wireless Options
@@ -58,14 +58,14 @@ adb shell am start -a android.intent.action.VIEW -d "headunit://connect?ip=192.1
 This repository can now be opened as a single Android Studio workspace with both apps:
 
 - `:app` for HeadUnitLauncher
-- `:headunitlauncher-helper-app` for HeadUnitLauncher Helper
+- `:headunit-helper-app` for HeadUnit Helper
 
 Helpful Gradle tasks:
 
 - `./gradlew assembleHeadunitGithubDebug`
 - `./gradlew installHeadunitGithubDebug`
-- `./gradlew assembleHeadunitLauncherHelperDebug`
-- `./gradlew installHeadunitLauncherHelperDebug`
+- `./gradlew assembleHeadunitHelperDebug`
+- `./gradlew installHeadunitHelperDebug`
 
 Creating release apk needs a keystore file. You can create your own keystore file using the following command in root folder:
 `keytool -genkey -v -keystore headunit-release-key.jks -alias headunit-revived -keyalg RSA -keysize 2048 -validity 10000`

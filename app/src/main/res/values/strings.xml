@@ -11,6 +11,7 @@
     <string name="exit">Exit</string>
     <string name="apps">Apps</string>
     <string name="connection">Connection</string>
+    <string name="connection_info">Connection Info</string>
     <string name="open_app_drawer">Open app drawer</string>
     <string name="search_apps">Search apps</string>
     <string name="android_settings">Android Settings</string>
@@ -21,6 +22,7 @@
     <string name="remove">Remove</string>
     <string name="usb">USB</string>
     <string name="wifi">WiFi</string>
+    <string name="connection_options_explainer">WiFi: Connect Android Auto wirelessly. This follows your selected wireless mode, such as Native or Wireless Helper.\n\nUSB: Connect a phone over USB. Use this for wired Android Auto and USB troubleshooting.\n\nSelf Mode: Launch Android Auto on this same device. This is mainly useful for local use, testing, or debug flows.</string>
     <string name="dpi">Pixel density (DPI)</string>
     <string name="mic_sample_rate">Mic sample rate</string>
     <string name="keymap">Keymap</string>
@@ -529,6 +531,13 @@
     <string name="select_nearby_device">Select Nearby Device</string>
     <string name="nearby_device_found">Nearby Device Found</string>
     <string name="connecting_to_nearby">Connecting to %s…</string>
+    <string name="broadcast_wifi_direct_name">Broadcast Wi-Fi Direct Name</string>
+    <string name="broadcast_wifi_direct_name_waiting">Open HeadUnit Helper on the phone, switch it to Wi-Fi Direct, then tap its detect button to receive this device name.</string>
+    <string name="wifi_direct_name_unavailable">Wi-Fi Direct name is not available yet. Return to the home screen once, then try again.</string>
+    <string name="wifi_direct_name_unavailable_title">Wi-Fi Direct Name Not Detected</string>
+    <string name="wifi_direct_name_unavailable_warning">This device could not provide its Wi-Fi Direct name for automatic pairing. The device may not support exposing that name, so you may need to add it manually in HeadUnit Helper.</string>
+    <string name="wifi_direct_name_broadcast_permissions_denied">Nearby and Bluetooth permissions are required to broadcast the Wi-Fi Direct name.</string>
+    <string name="wifi_direct_name_broadcast_sent">Shared Wi-Fi Direct name: %1$s</string>
 
     <string name="exit_dialog_title">Exit Android Auto</string>
     <string name="exit_dialog_stop">Stop Connection</string>

@@ -2,7 +2,9 @@ package org.xs.headunitlauncher.main
 
 import android.app.AlertDialog
 import android.content.Intent
+import android.content.Context
 import android.net.Uri
+import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings as SystemSettings
@@ -33,8 +35,12 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.pm.PackageManager
 import org.xs.headunitlauncher.connection.NativeAaHandshakeManager
+import org.xs.headunitlauncher.connection.WifiDirectDeviceNameResolver
+import org.xs.headunitlauncher.connection.WifiDirectNameBroadcastManager
 
 class SettingsFragment : Fragment() {
+    private data class HelperStrategyOption(val strategy: Int, val label: String)
+
     private lateinit var settings: Settings
     private lateinit var settingsRecyclerView: RecyclerView
     private lateinit var settingsAdapter: SettingsAdapter
@@ -102,6 +108,16 @@ class SettingsFragment : Fragment() {
             Toast.makeText(requireContext(), R.string.bt_permission_denied, Toast.LENGTH_LONG).show()
         }
     }
+    private val wifiDirectBroadcastPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            if (permissions.values.all { it }) {
+                startWifiDirectNameBroadcast()
+            } else {
+                Toast.makeText(requireContext(), R.string.wifi_direct_name_broadcast_permissions_denied, Toast.LENGTH_LONG).show()
+            }
+        }
+    private var wifiDirectNameBroadcastManager: WifiDirectNameBroadcastManager? = null
+    private var wifiDirectBroadcastDialog: androidx.appcompat.app.AlertDialog? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.fragment_settings, container, false)
@@ -145,6 +161,9 @@ class SettingsFragment : Fragment() {
 
         pendingWifiConnectionMode = settings.wifiConnectionMode
         pendingHelperConnectionStrategy = settings.helperConnectionStrategy
+        if (!deviceSupportsWifiDirect() && pendingHelperConnectionStrategy == 1) {
+            pendingHelperConnectionStrategy = 0
+        }
         pendingWaitForWifi = settings.waitForWifiBeforeWifiDirect
         pendingWaitForWifiTimeout = settings.waitForWifiTimeout
         
@@ -190,6 +209,14 @@ class SettingsFragment : Fragment() {
             }
         }
         outState.putBoolean("advanced_expanded", isAdvancedExpanded)
+    }
+
+    override fun onDestroyView() {
+        wifiDirectBroadcastDialog?.dismiss()
+        wifiDirectBroadcastDialog = null
+        wifiDirectNameBroadcastManager?.stop()
+        wifiDirectNameBroadcastManager = null
+        super.onDestroyView()
     }
 
     private fun setupToolbar() {
@@ -514,9 +541,10 @@ class SettingsFragment : Fragment() {
             }
         ))
 
-        val helperStrategies = resources.getStringArray(R.array.helper_strategies)
+        val helperStrategies = getVisibleHelperStrategies()
         val helperValue = if (selectedMode == 2) {
-            helperStrategies.getOrElse(pendingHelperConnectionStrategy ?: 0) { "" }
+            helperStrategies.firstOrNull { it.strategy == (pendingHelperConnectionStrategy ?: 0) }?.label
+                ?: helperStrategies.firstOrNull()?.label.orEmpty()
         } else {
             getString(R.string.helper_connection_unavailable)
         }
@@ -529,10 +557,13 @@ class SettingsFragment : Fragment() {
                     Toast.makeText(requireContext(), R.string.helper_connection_unavailable, Toast.LENGTH_SHORT).show()
                     return@SettingEntry
                 }
+                val labels = helperStrategies.map { it.label }.toTypedArray()
+                val selectedIndex = helperStrategies.indexOfFirst { it.strategy == (pendingHelperConnectionStrategy ?: 0) }
+                    .coerceAtLeast(0)
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                     .setTitle(R.string.helper_strategy_label)
-                    .setSingleChoiceItems(helperStrategies, pendingHelperConnectionStrategy ?: 0) { dialog, which ->
-                        pendingHelperConnectionStrategy = which
+                    .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                        pendingHelperConnectionStrategy = helperStrategies[which].strategy
                         checkChanges()
                         dialog.dismiss()
                         updateSettingsList()
@@ -540,6 +571,131 @@ class SettingsFragment : Fragment() {
                     .show()
             }
         ))
+
+        if (selectedMode == 2 && (pendingHelperConnectionStrategy ?: 0) == 1) {
+            items.add(SettingItem.ActionButton(
+                stableId = "broadcastWifiDirectName",
+                textResId = R.string.broadcast_wifi_direct_name,
+                onClick = { ensureWifiDirectBroadcastPermissionsAndStart() }
+            ))
+        }
+    }
+
+    private fun getVisibleHelperStrategies(): List<HelperStrategyOption> {
+        val labels = resources.getStringArray(R.array.helper_strategies)
+        val supportsWifiDirect = deviceSupportsWifiDirect()
+        return buildList {
+            labels.forEachIndexed { index, label ->
+                if (index == 1 && !supportsWifiDirect) return@forEachIndexed
+                add(HelperStrategyOption(strategy = index, label = label))
+            }
+        }
+    }
+
+    private fun deviceSupportsWifiDirect(): Boolean {
+        val packageManager = requireContext().packageManager
+        val hasFeature = packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI_DIRECT)
+        val manager = requireContext().getSystemService(Context.WIFI_P2P_SERVICE) as? WifiP2pManager
+        return hasFeature && manager != null
+    }
+
+    private fun ensureWifiDirectBroadcastPermissionsAndStart() {
+        val requiredPermissions = mutableListOf(
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requiredPermissions += android.Manifest.permission.BLUETOOTH_ADVERTISE
+            requiredPermissions += android.Manifest.permission.BLUETOOTH_CONNECT
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requiredPermissions += android.Manifest.permission.NEARBY_WIFI_DEVICES
+        }
+
+        val missingPermissions = requiredPermissions.filter {
+            ContextCompat.checkSelfPermission(requireContext(), it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missingPermissions.isNotEmpty()) {
+            wifiDirectBroadcastPermissionLauncher.launch(missingPermissions.toTypedArray())
+        } else {
+            startWifiDirectNameBroadcast()
+        }
+    }
+
+    private fun startWifiDirectNameBroadcast() {
+        val cachedName = AapService.wifiDirectName.value?.trim().orEmpty()
+        if (cachedName.isNotEmpty()) {
+            startWifiDirectNameBroadcastWithName(cachedName)
+            return
+        }
+
+        WifiDirectDeviceNameResolver(requireContext()).resolve { name ->
+            val resolvedName = name?.trim().orEmpty()
+            if (!isAdded) return@resolve
+            if (resolvedName.isEmpty()) {
+                showWifiDirectNameUnsupportedWarning()
+            } else {
+                startWifiDirectNameBroadcastWithName(resolvedName)
+            }
+        }
+    }
+
+    private fun startWifiDirectNameBroadcastWithName(name: String) {
+        val manager = wifiDirectNameBroadcastManager ?: WifiDirectNameBroadcastManager(requireContext().applicationContext).also {
+            wifiDirectNameBroadcastManager = it
+        }
+
+        if (!manager.hasRequiredPermissions()) {
+            Toast.makeText(requireContext(), R.string.wifi_direct_name_broadcast_permissions_denied, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        showWifiDirectBroadcastDialog()
+        manager.start(name, object : WifiDirectNameBroadcastManager.Callback {
+            override fun onWaiting() {
+                if (!isAdded) return
+                showWifiDirectBroadcastDialog()
+            }
+
+            override fun onSent(name: String) {
+                if (!isAdded) return
+                wifiDirectBroadcastDialog?.dismiss()
+                Toast.makeText(requireContext(), getString(R.string.wifi_direct_name_broadcast_sent, name), Toast.LENGTH_LONG).show()
+            }
+
+            override fun onError(message: String) {
+                if (!isAdded) return
+                wifiDirectBroadcastDialog?.dismiss()
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+            }
+
+            override fun onStopped() = Unit
+        })
+    }
+
+    private fun showWifiDirectBroadcastDialog() {
+        if (wifiDirectBroadcastDialog?.isShowing == true) return
+        wifiDirectBroadcastDialog = MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+            .setTitle(R.string.broadcast_wifi_direct_name)
+            .setMessage(R.string.broadcast_wifi_direct_name_waiting)
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                wifiDirectNameBroadcastManager?.stop()
+            }
+            .setOnDismissListener {
+                wifiDirectBroadcastDialog = null
+            }
+            .show()
+    }
+
+    private fun showWifiDirectNameUnsupportedWarning() {
+        MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+            .setTitle(R.string.wifi_direct_name_unavailable_title)
+            .setMessage(R.string.wifi_direct_name_unavailable_warning)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun addRegularDarkModeSettings(items: MutableList<SettingItem>) {

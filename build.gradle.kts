@@ -22,14 +22,14 @@ tasks.register("installHeadunitGithubDebug") {
     dependsOn(":app:installGithubDebug")
 }
 
-tasks.register("assembleHeadunitLauncherHelperDebug") {
+tasks.register("assembleHeadunitHelperDebug") {
     group = "build"
-    description = "Assembles the HeadUnitLauncher Helper debug APK."
-    dependsOn(":headunitlauncher-helper-app:assembleDebug")
+    description = "Assembles the HeadUnit Helper debug APK."
+    dependsOn(":headunit-helper-app:assembleDebug")
 }
 
-tasks.register("installHeadunitLauncherHelperDebug") {
+tasks.register("installHeadunitHelperDebug") {
     group = "installation"
-    description = "Installs the HeadUnitLauncher Helper debug APK on a connected device."
-    dependsOn(":headunitlauncher-helper-app:installDebug")
+    description = "Installs the HeadUnit Helper debug APK on a connected device."
+    dependsOn(":headunit-helper-app:installDebug")
 }

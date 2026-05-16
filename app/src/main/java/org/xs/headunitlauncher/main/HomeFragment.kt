@@ -83,6 +83,7 @@ class HomeFragment : Fragment() {
     private lateinit var usb: Button
     private lateinit var settings: Button
     private lateinit var wifi: Button
+    private lateinit var connectionInfoButton: ImageButton
     private lateinit var wifi_text_view: TextView
     private var nativeWirelessWarningContainer: View? = null
     private var nativeWirelessWarningText: TextView? = null
@@ -131,6 +132,7 @@ class HomeFragment : Fragment() {
         usb = view.findViewById(R.id.usb_button)
         settings = view.findViewById(R.id.settings_button)
         wifi = view.findViewById(R.id.wifi_button)
+        connectionInfoButton = view.findViewById(R.id.connection_info_button)
         wifi_text_view = view.findViewById(R.id.wifi_text)
         nativeWirelessWarningContainer = view.findViewById(R.id.native_wireless_warning_container)
         nativeWirelessWarningText = view.findViewById(R.id.native_wireless_warning_text)
@@ -451,6 +453,10 @@ class HomeFragment : Fragment() {
             startActivity(intent)
         }
 
+        connectionInfoButton.setOnClickListener {
+            showConnectionInfoDialog()
+        }
+
         appDrawerHandle.setOnClickListener {
             toggleAppDrawer()
         }
@@ -517,6 +523,15 @@ class HomeFragment : Fragment() {
         } else {
             self_mode_text.text = getString(R.string.self_mode)
         }
+    }
+
+    private fun showConnectionInfoDialog() {
+        activeDialog?.dismiss()
+        activeDialog = MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+            .setTitle(R.string.connection_info)
+            .setMessage(getString(R.string.connection_options_explainer))
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     override fun onResume() {
