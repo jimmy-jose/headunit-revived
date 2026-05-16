@@ -29,6 +29,13 @@
             app:exitAnim="@anim/slide_out_left"
             app:popEnterAnim="@anim/slide_in_left"
             app:popExitAnim="@anim/slide_out_right" />
+        <action
+            android:id="@+id/action_homeFragment_to_wirelessHelperTutorialFragment"
+            app:destination="@id/wirelessHelperTutorialFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/slide_out_left"
+            app:popEnterAnim="@anim/slide_in_left"
+            app:popExitAnim="@anim/slide_out_right" />
     </fragment>
 
     <fragment
@@ -147,5 +154,10 @@
         android:id="@+id/appLauncherListFragment"
         android:name="org.xs.headunitlauncher.main.AppLauncherListFragment"
         android:label="@string/apps" />
+
+    <fragment
+        android:id="@+id/wirelessHelperTutorialFragment"
+        android:name="org.xs.headunitlauncher.main.WirelessHelperTutorialFragment"
+        android:label="@string/wireless_helper_tutorial_title" />
 
 </navigation>

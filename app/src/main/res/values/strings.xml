@@ -223,10 +223,8 @@
     <string name="force_software_decoding">Force Software Decoding</string>
     <string name="force_software_decoding_description">May fix issues on some devices, but is less performant</string>
     <string name="wireless_mode">Wireless Mode</string>
-    <string name="wireless_mode_description">Select how the app connects wirelessly (Manual list, Auto-search for Phone, or Wireless Launcher mode)</string>
+    <string name="wireless_mode_description">Select how the app connects wirelessly using Native Android Auto or Wireless Helper.</string>
     <string-array name="wireless_connection_modes">
-        <item>Manual (List)</item>
-        <item>Auto-search (Headunit Server)</item>
         <item>Wireless Helper (Waiting for Phone)</item>
         <item>Native Android Auto (Official Handshake)</item>
     </string-array>
@@ -480,7 +478,28 @@
     <string name="supported_nativeaa">Enhanced Wireless Support</string>
     <string name="supported_nativeaa_desc">Great news! Your device supports \"Native Wireless\" mode, which provides a more seamless Android Auto experience. \n\nTo enable this, we need to refresh your Bluetooth cache. Please: \n1. Remove the existing pairing on your phone \n2. Click OK to restart Bluetooth \n3. Re-pair your phone \n\nWould you like to switch to Native AA mode now?</string>
     <string name="not_supported_nativeaa">Native Wireless seems not supported</string>
-    <string name="not_supported_nativeaa_desc">Your device might not support the required Bluetooth or Wi-Fi features for Native Wireless. You can try it anyway, but if it fails, please use the \"Wireless Helper\" or \"Auto (Headunit Server)\" mode instead.</string>
+    <string name="not_supported_nativeaa_desc">Your device might not support the required Bluetooth or Wi-Fi features for Native Wireless. You can try it anyway, but if it fails, please use Wireless Helper instead.</string>
+    <string name="native_wireless_unsupported_warning">Warning: Native Android Auto is not supported on this device. Android is hiding the Wi-Fi Direct MAC/BSSID required for the official handshake, so the connection may appear briefly and then close. Please use Wireless Helper instead, then tap Save.</string>
+    <string name="native_wireless_home_warning">Native Android Auto cannot finish connecting on this device because Android hides the Wi-Fi Direct details needed for the official handshake. Wireless Helper is the recommended workaround.</string>
+    <string name="use_wireless_helper">Use Wireless Helper</string>
+    <string name="switch_to_wireless_helper">Switch To Wireless Helper</string>
+    <string name="open_helper_tutorial">How To Set It Up</string>
+    <string name="switched_to_wireless_helper">Wireless mode switched to Wireless Helper.</string>
+    <string name="switch_to_helper_short">Switch</string>
+    <string name="setup_guide_short">Guide</string>
+    <string name="hide_warning_short">Hide</string>
+    <string name="wireless_mode_helper_full">Wireless Helper</string>
+    <string name="wireless_mode_native_full">Native Android Auto</string>
+    <string name="wireless_helper_tutorial_title">Wireless Helper Setup</string>
+    <string name="wireless_helper_tutorial_intro_title">Use this when Native Android Auto does not work</string>
+    <string name="wireless_helper_tutorial_intro_body">Some devices block the Wi-Fi Direct information required by the official Android Auto handshake. Wireless Helper works around that limitation and is the easiest path on affected devices.</string>
+    <string name="wireless_helper_tutorial_step1_title">1. Install the Wireless Helper app on your phone</string>
+    <string name="wireless_helper_tutorial_step1_body">Install the helper app on the same phone you use for Android Auto. You can add screenshots and store links here later.</string>
+    <string name="wireless_helper_tutorial_step2_title">2. Switch this head unit to Wireless Helper mode</string>
+    <string name="wireless_helper_tutorial_step2_body">Tap “Switch To Wireless Helper” on the home warning card, or choose Wireless Helper in Wireless Connection settings. Keep Bluetooth and Wi-Fi enabled on the phone.</string>
+    <string name="wireless_helper_tutorial_step3_title">3. Open the helper on your phone and follow its prompts</string>
+    <string name="wireless_helper_tutorial_step3_body">Start the helper app on your phone, allow the permissions it asks for, then connect to this head unit when it appears. Once the helper finishes, Android Auto should launch normally.</string>
+    <string name="wireless_helper_tutorial_screenshot_placeholder">Screenshot placeholder</string>
 
     <string name="wait_for_wifi">Wait for WiFi before WiFi Direct</string>
     <string name="wait_for_wifi_description">On boot, wait for WiFi to connect before starting WiFi Direct. Enable this if your head unit needs a few seconds to connect to WiFi after power on.</string>

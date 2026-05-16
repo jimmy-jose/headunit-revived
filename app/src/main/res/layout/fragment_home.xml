@@ -119,6 +119,69 @@
                         android:textFontWeight="700"
                         android:textSize="20sp"
                         android:textStyle="bold" />
+                    <LinearLayout
+                        android:id="@+id/native_wireless_warning_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginEnd="16dp"
+                        android:background="@drawable/bg_pill_translucent"
+                        android:orientation="vertical"
+                        android:paddingStart="14dp"
+                        android:paddingTop="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingBottom="14dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/native_wireless_warning_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/native_wireless_home_warning"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:baselineAligned="false"
+                            android:orientation="horizontal"
+                            android:weightSum="3">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/native_wireless_switch_button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="6dp"
+                                android:layout_weight="1"
+                                android:text="@string/switch_to_helper_short"
+                                app:backgroundTint="@color/brand_teal"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/native_wireless_tutorial_button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
+                                android:layout_weight="1"
+                                android:text="@string/setup_guide_short"
+                                app:backgroundTint="@color/material_grey_700"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/native_wireless_hide_button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:layout_weight="1"
+                                android:text="@string/hide_warning_short"
+                                app:backgroundTint="@color/material_grey_700"
+                                app:cornerRadius="10dp" />
+                        </LinearLayout>
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout

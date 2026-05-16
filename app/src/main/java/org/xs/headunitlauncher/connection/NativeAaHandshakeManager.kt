@@ -61,6 +61,7 @@ class NativeAaHandshakeManager(
     private var currentIp: String? = null
     private var currentBssid: String? = null
     private var pokeJob: Job? = null
+    private var lastAutoPokeAtMs: Long = 0L
 
     /**
      * Updates the WiFi credentials that will be sent to the phone during the next handshake.
@@ -199,6 +200,13 @@ class NativeAaHandshakeManager(
         val settings = org.xs.headunitlauncher.App.provide(context).settings
         val lastMac = settings.autoStartBluetoothDeviceMac
 
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastAutoPokeAtMs < 10000L) {
+            AppLog.i("NativeAA: Skipping auto-poke because a recent poke is already in flight.")
+            return
+        }
+        lastAutoPokeAtMs = now
+
         pokeJob?.cancel()
         pokeJob = scope.launch(Dispatchers.IO + CoroutineName("NativeAa-Wakeup")) {
             AppLog.d("NativeAA: triggerPoke() delay starting (2s)...")
@@ -331,7 +339,7 @@ class NativeAaHandshakeManager(
                 AppLog.i("NativeAA: Phone requested security info (Ready for WiFi association).")
                 AppLog.i("NativeAA: Sending WifiInfoResponse (Type 3) with full credentials in 500ms...")
                 delay(500)
-                sendWifiSecurityResponse(output, ssid, psk, bssid)
+                sendWifiSecurityResponse(output, ssid, psk, ip, bssid)
                 AppLog.i("NativeAA: Handshake completed successfully on Bluetooth side.")
                 // Instead of closing after 20 seconds, keep the socket open indefinitely
                 // as long as the phone remains connected.
@@ -360,15 +368,50 @@ class NativeAaHandshakeManager(
         sendProtobuf(output, request.toByteArray(), 1)
     }
 
-    private fun sendWifiSecurityResponse(output: OutputStream, ssid: String, key: String, bssid: String) {
-        val response = Wireless.WifiInfoResponse.newBuilder()
+    private fun sendWifiSecurityResponse(output: OutputStream, ssid: String, key: String, ip: String, bssid: String) {
+        val finalBssid = if (isUsableBssid(bssid)) {
+            org.xs.headunitlauncher.App.provide(context).settings.nativeWirelessUnsupported = false
+            bssid.trim().uppercase()
+        } else {
+            val fallback = buildFallbackBssid(ssid, ip)
+            org.xs.headunitlauncher.App.provide(context).settings.nativeWirelessUnsupported = true
+            AppLog.w("NativeAA: Real BSSID unavailable. Using fallback BSSID $fallback for handshake.")
+            fallback
+        }
+        val builder = Wireless.WifiInfoResponse.newBuilder()
             .setSsid(ssid)
             .setKey(key)
-            .setBssid(bssid)
+            .setBssid(finalBssid)
             .setSecurityMode(Wireless.SecurityMode.WPA2_PERSONAL)
             .setAccessPointType(Wireless.AccessPointType.STATIC)
-            .build()
+        val response = builder.build()
         sendProtobuf(output, response.toByteArray(), 3)
+    }
+
+    private fun buildFallbackBssid(ssid: String, ip: String): String {
+        val seed = "$ssid|$ip".toByteArray(Charsets.UTF_8)
+        var hash = 0x42
+        for (byte in seed) {
+            hash = (hash * 33) xor (byte.toInt() and 0xFF)
+        }
+
+        val bytes = byteArrayOf(
+            0x02,
+            0x1A,
+            ((hash shr 24) and 0xFF).toByte(),
+            ((hash shr 16) and 0xFF).toByte(),
+            ((hash shr 8) and 0xFF).toByte(),
+            (hash and 0xFF).toByte()
+        )
+
+        return bytes.joinToString(":") { "%02X".format(it.toInt() and 0xFF) }
+    }
+
+    private fun isUsableBssid(bssid: String?): Boolean {
+        val normalized = bssid?.trim()?.uppercase() ?: return false
+        return normalized.isNotEmpty() &&
+            normalized != "00:00:00:00:00:00" &&
+            normalized != "02:00:00:00:00:00"
     }
 
     private fun sendProtobuf(output: OutputStream, data: ByteArray, type: Short) {
@@ -409,5 +452,6 @@ class NativeAaHandshakeManager(
         currentBssid = null
         pokeJob?.cancel()
         pokeJob = null
+        lastAutoPokeAtMs = 0L
     }
 }

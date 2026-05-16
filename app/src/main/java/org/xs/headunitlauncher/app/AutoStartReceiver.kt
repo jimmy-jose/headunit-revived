@@ -5,13 +5,21 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import org.xs.headunitlauncher.aap.AapService
+import org.xs.headunitlauncher.connection.CommManager
 import org.xs.headunitlauncher.main.MainActivity
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.Settings
 import android.os.UserManager
 import android.os.Build
+import android.os.SystemClock
 
 class AutoStartReceiver : BroadcastReceiver() {
+
+    companion object {
+        private const val AUTO_START_COOLDOWN_MS = 30_000L
+        private var lastMatchedMac: String? = null
+        private var lastMatchElapsedRealtime: Long = 0L
+    }
 
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action
@@ -23,10 +31,20 @@ class AutoStartReceiver : BroadcastReceiver() {
         val isLocked = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && 
                       !(context.getSystemService(Context.USER_SERVICE) as UserManager).isUserUnlocked
         
-        // [FIX] Don't trigger auto-start if we are already connected!
-        // This prevents activity restarts if BT reconnects during a session.
-        if (!isLocked && org.xs.headunitlauncher.App.provide(context).commManager.isConnected) {
-            AppLog.d("AutoStartReceiver: Already connected to Android Auto. Ignoring BT event.")
+        val app = org.xs.headunitlauncher.App.provide(context)
+        val settings = app.settings
+        val connectionState = app.commManager.connectionState.value
+
+        // Nearby Helper mode is manually initiated from the home screen. Starting the
+        // service again from a BT event adds churn right in the middle of the Nearby flow.
+        if (!isLocked && settings.wifiConnectionMode == 2 && settings.helperConnectionStrategy == 2) {
+            AppLog.i("AutoStartReceiver: Ignoring BT auto-start while Wireless Helper Nearby mode is active.")
+            return
+        }
+
+        // Don't trigger auto-start if we already have an active or in-progress AA session.
+        if (!isLocked && connectionState !is CommManager.ConnectionState.Disconnected) {
+            AppLog.d("AutoStartReceiver: Android Auto is already active/in progress ($connectionState). Ignoring BT event.")
             return
         }
 
@@ -41,6 +59,14 @@ class AutoStartReceiver : BroadcastReceiver() {
             AppLog.i("BT Device connected: ${device?.name} (${device?.address})")
 
             if (device?.address == targetMac) {
+                val now = SystemClock.elapsedRealtime()
+                if (lastMatchedMac == targetMac && now - lastMatchElapsedRealtime < AUTO_START_COOLDOWN_MS) {
+                    AppLog.i("AutoStartReceiver: Skipping duplicate BT auto-start for $targetMac; cooldown active (${AUTO_START_COOLDOWN_MS - (now - lastMatchElapsedRealtime)}ms remaining).")
+                    return
+                }
+                lastMatchedMac = targetMac
+                lastMatchElapsedRealtime = now
+
                 AppLog.i("MATCH! Starting AapService via Bluetooth Auto-start...")
                 
                 // Start the service to make the app alive

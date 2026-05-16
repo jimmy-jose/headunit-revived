@@ -473,18 +473,31 @@ class SettingsFragment : Fragment() {
     }
 
     private fun addRegularWirelessSettings(items: MutableList<SettingItem>) {
+        data class WirelessModeOption(val mode: Int, val labelResId: Int)
+        val visibleWirelessModes = listOf(
+            WirelessModeOption(mode = 3, labelResId = R.string.wireless_mode_native_full),
+            WirelessModeOption(mode = 2, labelResId = R.string.wireless_mode_helper_full),
+        )
+        val selectedMode = if (pendingWifiConnectionMode == 3) 3 else 2
+        val selectedModeLabel = visibleWirelessModes
+            .firstOrNull { it.mode == selectedMode }
+            ?.let { getString(it.labelResId) }
+            .orEmpty()
+
         items.add(SettingItem.CategoryHeader("wirelessConnection", R.string.category_wireless))
-        val wirelessModes = resources.getStringArray(R.array.wireless_connection_modes)
         items.add(SettingItem.SettingEntry(
             stableId = "wifiConnectionModeRegular",
             nameResId = R.string.wireless_mode,
-            value = wirelessModes.getOrElse(pendingWifiConnectionMode ?: 0) { "" },
+            value = selectedModeLabel,
             onClick = { _ ->
+                val wirelessModes = visibleWirelessModes.map { getString(it.labelResId) }.toTypedArray()
+                val currentSelection = visibleWirelessModes.indexOfFirst { it.mode == selectedMode }.coerceAtLeast(0)
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                     .setTitle(R.string.wireless_mode)
-                    .setSingleChoiceItems(wirelessModes, pendingWifiConnectionMode ?: 0) { dialog, which ->
+                    .setSingleChoiceItems(wirelessModes, currentSelection) { dialog, which ->
                         dialog.dismiss()
-                        if (which == 3) {
+                        val selectedOption = visibleWirelessModes[which]
+                        if (selectedOption.mode == 3) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                                 ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                                 bluetoothPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
@@ -492,7 +505,7 @@ class SettingsFragment : Fragment() {
                                 handleNativeAaSelection()
                             }
                         } else {
-                            pendingWifiConnectionMode = which
+                            pendingWifiConnectionMode = selectedOption.mode
                             checkChanges()
                             updateSettingsList()
                         }
@@ -502,7 +515,7 @@ class SettingsFragment : Fragment() {
         ))
 
         val helperStrategies = resources.getStringArray(R.array.helper_strategies)
-        val helperValue = if (pendingWifiConnectionMode == 2) {
+        val helperValue = if (selectedMode == 2) {
             helperStrategies.getOrElse(pendingHelperConnectionStrategy ?: 0) { "" }
         } else {
             getString(R.string.helper_connection_unavailable)
@@ -512,7 +525,7 @@ class SettingsFragment : Fragment() {
             nameResId = R.string.helper_strategy_label,
             value = helperValue,
             onClick = { _ ->
-                if (pendingWifiConnectionMode != 2) {
+                if (selectedMode != 2) {
                     Toast.makeText(requireContext(), R.string.helper_connection_unavailable, Toast.LENGTH_SHORT).show()
                     return@SettingEntry
                 }
@@ -581,7 +594,6 @@ class SettingsFragment : Fragment() {
 
         if (!isAdvancedExpanded) return
 
-        addAdvancedWirelessSettings(items)
         addAdvancedAutomationSettings(items)
         addAdvancedNavigationSettings(items)
         addAdvancedGraphicSettings(items)
@@ -589,20 +601,6 @@ class SettingsFragment : Fragment() {
         addAdvancedInputSettings(items)
         addAdvancedAudioSettings(items)
         addAdvancedDebugSettings(items)
-    }
-
-    private fun addAdvancedWirelessSettings(items: MutableList<SettingItem>) {
-        items.add(SettingItem.CategoryHeader("advancedWireless", R.string.category_wireless))
-        items.add(SettingItem.SettingEntry(
-            stableId = "wirelessAdvancedSettings",
-            nameResId = R.string.wireless_advanced_settings,
-            value = getString(R.string.wireless_advanced_settings_description),
-            onClick = {
-                try {
-                    findNavController().navigate(R.id.action_settingsFragment_to_wirelessConnectionFragment)
-                } catch (_: Exception) { }
-            }
-        ))
     }
 
     private fun addAdvancedAutomationSettings(items: MutableList<SettingItem>) {

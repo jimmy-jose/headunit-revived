@@ -84,6 +84,11 @@ class HomeFragment : Fragment() {
     private lateinit var settings: Button
     private lateinit var wifi: Button
     private lateinit var wifi_text_view: TextView
+    private var nativeWirelessWarningContainer: View? = null
+    private var nativeWirelessWarningText: TextView? = null
+    private var nativeWirelessSwitchButton: Button? = null
+    private var nativeWirelessTutorialButton: Button? = null
+    private var nativeWirelessHideButton: Button? = null
     private lateinit var exitButton: Button
     private var launcherSetupContainer: View? = null
     private lateinit var self_mode_text: TextView
@@ -127,6 +132,11 @@ class HomeFragment : Fragment() {
         settings = view.findViewById(R.id.settings_button)
         wifi = view.findViewById(R.id.wifi_button)
         wifi_text_view = view.findViewById(R.id.wifi_text)
+        nativeWirelessWarningContainer = view.findViewById(R.id.native_wireless_warning_container)
+        nativeWirelessWarningText = view.findViewById(R.id.native_wireless_warning_text)
+        nativeWirelessSwitchButton = view.findViewById(R.id.native_wireless_switch_button)
+        nativeWirelessTutorialButton = view.findViewById(R.id.native_wireless_tutorial_button)
+        nativeWirelessHideButton = view.findViewById(R.id.native_wireless_hide_button)
         exitButton = view.findViewById(R.id.exit_button)
         launcherSetupContainer = view.findViewById(R.id.launcher_setup_container)
         self_mode_text = view.findViewById(R.id.self_mode_text)
@@ -179,6 +189,7 @@ class HomeFragment : Fragment() {
         setupListeners()
         updateProjectionButtonText()
         updateLauncherUi()
+        updateNativeWirelessWarning()
         loadHomeApps()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -447,19 +458,6 @@ class HomeFragment : Fragment() {
         wifi.setOnClickListener {
             val mode = App.provide(requireContext()).settings.wifiConnectionMode
             when (mode) {
-                1 -> { // Auto (Headunit Server) - One-Shot Scan
-                    if (commManager.isConnected) {
-                        // Already connected
-                    } else if (AapService.scanningState.value) {
-                        Toast.makeText(requireContext(), getString(R.string.already_scanning), Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(requireContext(), getString(R.string.searching_headunit_server), Toast.LENGTH_SHORT).show()
-                        val intent = Intent(requireContext(), AapService::class.java).apply {
-                            action = AapService.ACTION_START_WIRELESS_SCAN
-                        }
-                        ContextCompat.startForegroundService(requireContext(), intent)
-                    }
-                }
                 2 -> { // Helper (Wireless Launcher)
                     if (commManager.isConnected) {
                         // Already connected
@@ -487,21 +485,29 @@ class HomeFragment : Fragment() {
                         showNativeAaDeviceSelector()
                     }
                 }
-                else -> { // Manual (0) -> Open List
-                    val controller = findNavController()
-                    if (controller.currentDestination?.id == R.id.homeFragment) {
-                        controller.navigate(R.id.action_homeFragment_to_networkListFragment)
-                    }
-                }
             }
         }
 
         wifi.setOnLongClickListener {
+            true
+        }
+
+        nativeWirelessSwitchButton?.setOnClickListener {
+            switchToWirelessHelper()
+        }
+
+        nativeWirelessTutorialButton?.setOnClickListener {
             val controller = findNavController()
             if (controller.currentDestination?.id == R.id.homeFragment) {
-                controller.navigate(R.id.action_homeFragment_to_networkListFragment)
+                controller.navigate(R.id.action_homeFragment_to_wirelessHelperTutorialFragment)
             }
-            true
+        }
+
+        nativeWirelessHideButton?.setOnClickListener {
+            val appSettings = App.provide(requireContext()).settings
+            appSettings.hideNativeWirelessWarning = true
+            appSettings.commit()
+            updateNativeWirelessWarning()
         }
     }
 
@@ -520,8 +526,37 @@ class HomeFragment : Fragment() {
         updateLauncherUi()
         loadHomeApps()
         updateDrawerUi(appDrawerBehavior.state == BottomSheetBehavior.STATE_EXPANDED)
+        updateNativeWirelessWarning()
         updateButtonStyle()
         updateTextColors()
+    }
+
+    private fun updateNativeWirelessWarning() {
+        val appSettings = App.provide(requireContext()).settings
+        val shouldShow = appSettings.wifiConnectionMode == 3 &&
+            appSettings.nativeWirelessUnsupported &&
+            !appSettings.hideNativeWirelessWarning
+        nativeWirelessWarningContainer?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        nativeWirelessWarningText?.text = getString(R.string.native_wireless_home_warning)
+    }
+
+    private fun switchToWirelessHelper() {
+        val appSettings = App.provide(requireContext()).settings
+        if (appSettings.wifiConnectionMode == 2) {
+            updateNativeWirelessWarning()
+            return
+        }
+
+        appSettings.wifiConnectionMode = 2
+        appSettings.commit()
+
+        val intent = Intent(requireContext(), AapService::class.java).apply {
+            action = AapService.ACTION_START_WIRELESS
+        }
+        requireContext().startService(intent)
+
+        updateNativeWirelessWarning()
+        Toast.makeText(requireContext(), R.string.switched_to_wireless_helper, Toast.LENGTH_SHORT).show()
     }
 
     override fun onPause() {

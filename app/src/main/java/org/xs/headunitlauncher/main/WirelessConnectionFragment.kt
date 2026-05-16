@@ -27,6 +27,11 @@ import androidx.core.content.ContextCompat
 
 class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connection) {
 
+    private data class WirelessModeOption(
+        val mode: Int,
+        val labelResId: Int,
+    )
+
     private lateinit var settings: Settings
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: SettingsAdapter
@@ -39,6 +44,10 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
     
     private var hasChanges = false
     private val SAVE_ITEM_ID = 1001
+    private val visibleWirelessModes = listOf(
+        WirelessModeOption(mode = 3, labelResId = R.string.wireless_mode_native_full),
+        WirelessModeOption(mode = 2, labelResId = R.string.wireless_mode_helper_full),
+    )
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -55,7 +64,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
         super.onViewCreated(view, savedInstanceState)
         settings = App.provide(requireContext()).settings
 
-        pendingWifiConnectionMode = settings.wifiConnectionMode
+        pendingWifiConnectionMode = normalizeVisibleMode(settings.wifiConnectionMode)
         pendingAutoEnableHotspot = settings.autoEnableHotspot
         pendingWaitForWifi = settings.waitForWifiBeforeWifiDirect
         pendingWaitForWifiTimeout = settings.waitForWifiTimeout
@@ -98,7 +107,12 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
 
     private fun updateSettingsList() {
         val items = mutableListOf<SettingItem>()
-        val wifiModes = resources.getStringArray(R.array.wireless_connection_modes)
+        val nativeWirelessUnsupported = settings.nativeWirelessUnsupported
+        val selectedMode = normalizeVisibleMode(pendingWifiConnectionMode)
+        val selectedModeLabel = visibleWirelessModes
+            .firstOrNull { it.mode == selectedMode }
+            ?.let { getString(it.labelResId) }
+            .orEmpty()
 
         // Add 2.4GHz Warning Banner at the top
         items.add(SettingItem.InfoBanner(
@@ -106,19 +120,41 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
             textResId = R.string.wireless_24ghz_warning
         ))
 
+        if (nativeWirelessUnsupported) {
+            items.add(SettingItem.InfoBanner(
+                stableId = "nativeWirelessUnsupportedWarning",
+                textResId = R.string.native_wireless_unsupported_warning
+            ))
+
+            if (selectedMode != 2) {
+                items.add(SettingItem.ActionButton(
+                    stableId = "useWirelessHelperButton",
+                    textResId = R.string.use_wireless_helper,
+                    onClick = {
+                        pendingWifiConnectionMode = 2
+                        checkChanges()
+                        updateSettingsList()
+                    }
+                ))
+            }
+        }
+
         items.add(SettingItem.CategoryHeader("wireless_mode", R.string.wireless_mode))
         
         items.add(SettingItem.SettingEntry(
             stableId = "wifiConnectionMode",
             nameResId = R.string.wireless_mode,
-            value = wifiModes.getOrElse(pendingWifiConnectionMode!!) { "" },
+            value = selectedModeLabel,
             onClick = { _ ->
+                val wifiModes = visibleWirelessModes.map { getString(it.labelResId) }.toTypedArray()
+                val currentSelection = visibleWirelessModes.indexOfFirst { it.mode == selectedMode }.coerceAtLeast(0)
                 MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                     .setTitle(R.string.wireless_mode)
-                    .setSingleChoiceItems(wifiModes, pendingWifiConnectionMode!!) { dialog, which ->
+                    .setSingleChoiceItems(wifiModes, currentSelection) { dialog, which ->
                         dialog.dismiss()
-                        
-                        if (which == 3) {
+
+                        val selectedOption = visibleWirelessModes[which]
+                        if (selectedOption.mode == 3) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && 
                                 ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                                 requestPermissionLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT)
@@ -126,7 +162,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
                                 handleNativeAaSelection()
                             }
                         } else {
-                            pendingWifiConnectionMode = which
+                            pendingWifiConnectionMode = selectedOption.mode
                             checkChanges()
                             updateSettingsList()
                         }
@@ -135,7 +171,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
             }
         ))
 
-        if (pendingWifiConnectionMode == 1 || pendingWifiConnectionMode == 2) {
+        if (selectedMode == 2) {
             items.add(SettingItem.ToggleSettingEntry(
                 stableId = "autoEnableHotspot",
                 nameResId = R.string.auto_enable_hotspot,
@@ -157,7 +193,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
             ))
         }
 
-        if (pendingWifiConnectionMode == 2) {
+        if (selectedMode == 2) {
             items.add(SettingItem.ToggleSettingEntry(
                 stableId = "waitForWifi",
                 nameResId = R.string.wait_for_wifi,
@@ -220,6 +256,21 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
     }
 
     private fun handleNativeAaSelection() {
+        if (settings.nativeWirelessUnsupported) {
+            MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
+                .setTitle(R.string.not_supported_nativeaa)
+                .setMessage(R.string.native_wireless_unsupported_warning)
+                .setPositiveButton(android.R.string.ok) { dialog, _ ->
+                    pendingWifiConnectionMode = 2
+                    checkChanges()
+                    updateSettingsList()
+                    dialog.dismiss()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
+
         if (NativeAaHandshakeManager.checkCompatibility(requireContext())) {
             MaterialAlertDialogBuilder(requireContext(), R.style.DarkAlertDialog)
                 .setTitle(R.string.supported_nativeaa)
@@ -266,7 +317,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
     }
 
     private fun checkChanges() {
-        val anyChange = pendingWifiConnectionMode != settings.wifiConnectionMode ||
+        val anyChange = normalizeVisibleMode(pendingWifiConnectionMode) != settings.wifiConnectionMode ||
                         pendingAutoEnableHotspot != settings.autoEnableHotspot ||
                         pendingWaitForWifi != settings.waitForWifiBeforeWifiDirect ||
                         pendingWaitForWifiTimeout != settings.waitForWifiTimeout
@@ -280,7 +331,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
 
     private fun saveSettings() {
         val oldMode = settings.wifiConnectionMode
-        settings.wifiConnectionMode = pendingWifiConnectionMode!!
+        settings.wifiConnectionMode = normalizeVisibleMode(pendingWifiConnectionMode)
         settings.autoEnableHotspot = pendingAutoEnableHotspot!!
         settings.waitForWifiBeforeWifiDirect = pendingWaitForWifi!!
         settings.waitForWifiTimeout = pendingWaitForWifiTimeout!!
@@ -290,7 +341,7 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
         if (oldMode != settings.wifiConnectionMode) {
             val intent = Intent(requireContext(), AapService::class.java).apply {
                 val mode = settings.wifiConnectionMode
-                action = if (mode == 1 || mode == 2 || mode == 3) 
+                action = if (mode == 2 || mode == 3)
                     AapService.ACTION_START_WIRELESS else AapService.ACTION_STOP_WIRELESS
             }
             requireContext().startService(intent)
@@ -314,4 +365,6 @@ class WirelessConnectionFragment : Fragment(R.layout.fragment_wireless_connectio
             findNavController().popBackStack()
         }
     }
+
+    private fun normalizeVisibleMode(mode: Int?): Int = if (mode == 3) 3 else 2
 }

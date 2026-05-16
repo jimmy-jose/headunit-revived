@@ -29,6 +29,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     private val handler = Handler(Looper.getMainLooper())
     private var localDeviceAddress: String? = null
     private var lastKnownBssid: String? = null
+    private var lastCredentialSignature: String? = null
 
     private var onCredentialsReady: ((ssid: String, psk: String, ip: String, bssid: String) -> Unit)? = null
 
@@ -148,23 +149,23 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             val isOwner = group.isGroupOwner
 
             // [FIX] Robust BSSID detection for masked MACs (00:00 or 02:00)
-            if (bssid == "00:00:00:00:00:00" || bssid == "02:00:00:00:00:00") {
+            if (!isUsableMac(bssid)) {
                 // Fallback 1: Use last known valid BSSID
-                if (!lastKnownBssid.isNullOrEmpty() && lastKnownBssid != "00:00:00:00:00:00" && lastKnownBssid != "02:00:00:00:00:00") {
+                if (isUsableMac(lastKnownBssid)) {
                     AppLog.i("WifiDirectManager: BSSID masked, using lastKnownBssid: $lastKnownBssid")
                     bssid = lastKnownBssid!!
                 }
                 // Fallback 2: Use captured localDeviceAddress (from THIS_DEVICE_CHANGED or requestDeviceInfo)
-                else if (!localDeviceAddress.isNullOrEmpty() && localDeviceAddress != "00:00:00:00:00:00" && localDeviceAddress != "02:00:00:00:00:00") {
+                else if (isUsableMac(localDeviceAddress)) {
                     AppLog.i("WifiDirectManager: BSSID masked, using localDeviceAddress: $localDeviceAddress")
                     bssid = localDeviceAddress!!
                 } 
                 // Fallback 3: Use group.owner.deviceAddress
                 else {
                     val ownerAddr = group.owner?.deviceAddress
-                    if (!ownerAddr.isNullOrEmpty() && ownerAddr != "00:00:00:00:00:00" && ownerAddr != "02:00:00:00:00:00") {
+                    if (isUsableMac(ownerAddr)) {
                         AppLog.i("WifiDirectManager: BSSID masked, using group.owner.deviceAddress: $ownerAddr")
-                        bssid = ownerAddr
+                        bssid = ownerAddr!!
                     } 
                     // Fallback 4: Shell command "ip link"
                     else {
@@ -175,6 +176,14 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         }
                     }
                 }
+            }
+
+            if (isUsableMac(bssid)) {
+                bssid = normalizeMac(bssid)
+                lastKnownBssid = bssid
+            } else {
+                AppLog.w("WifiDirectManager: Unable to determine a valid BSSID yet for SSID=$ssid. Proceeding without BSSID.")
+                bssid = ""
             }
 
             // Try to get frequency via reflection (hidden field in WifiP2pGroup)
@@ -209,7 +218,13 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         }
 
                         val finalIp = ip ?: "192.168.49.1"
-                        AppLog.i("WifiDirectManager: SUCCESS - Providing credentials to HandshakeManager. SSID=$ssid, IP=$finalIp")
+                        val signature = "$ssid|$psk|$finalIp|$bssid"
+                        if (signature == lastCredentialSignature) {
+                            AppLog.d("WifiDirectManager: Credential set unchanged; skipping duplicate delivery.")
+                            return@Thread
+                        }
+                        lastCredentialSignature = signature
+                        AppLog.i("WifiDirectManager: SUCCESS - Providing credentials to HandshakeManager. SSID=$ssid, IP=$finalIp, hasBssid=${bssid.isNotEmpty()}")
                         onCredentialsReady?.invoke(ssid, psk, finalIp, bssid)
                     } catch (e: Exception) {
                         AppLog.e("WifiDirectManager: Error in credential delivery thread", e)
@@ -234,10 +249,10 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     private fun getWifiDirectMac(ifaceName: String?): String {
         try {
             val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            val candidates = buildMacCandidateInterfaceNames(ifaceName)
             while (interfaces.hasMoreElements()) {
                 val iface = interfaces.nextElement()
-                if (ifaceName != null && iface.name != ifaceName) continue
-                if (ifaceName == null && !iface.name.contains("p2p")) continue
+                if (!candidates.contains(iface.name)) continue
 
                 val mac = iface.hardwareAddress
                 if (mac != null) {
@@ -245,11 +260,48 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                     for (i in mac.indices) {
                         sb.append(String.format("%02X%s", mac[i], if (i < mac.size - 1) ":" else ""))
                     }
-                    return sb.toString()
+                    val foundMac = sb.toString()
+                    AppLog.i("WifiDirectManager: NetworkInterface candidate ${iface.name} reported MAC $foundMac")
+                    if (isUsableMac(foundMac)) return foundMac
                 }
             }
         } catch (e: Exception) {}
         return "00:00:00:00:00:00"
+    }
+
+    private fun isUsableMac(mac: String?): Boolean {
+        val normalized = mac?.trim()?.uppercase() ?: return false
+        return normalized.isNotEmpty() &&
+            normalized != "00:00:00:00:00:00" &&
+            normalized != "02:00:00:00:00:00"
+    }
+
+    private fun normalizeMac(mac: String): String = mac.trim().uppercase()
+
+    private fun buildMacCandidateInterfaceNames(ifaceName: String?): Set<String> {
+        val names = linkedSetOf<String>()
+        ifaceName?.let { rawName ->
+            names += rawName
+
+            // Common sibling interfaces used by Android Wi-Fi Direct stacks.
+            val wlanSuffix = Regex("""wlan\d+""").find(rawName)?.value
+            if (wlanSuffix != null) {
+                names += wlanSuffix
+                names += "p2p-dev-$wlanSuffix"
+            }
+
+            if (rawName.startsWith("p2p-")) {
+                val maybeBase = rawName.removePrefix("p2p-").substringBefore('-')
+                if (maybeBase.startsWith("wlan")) {
+                    names += maybeBase
+                    names += "p2p-dev-$maybeBase"
+                }
+            }
+        }
+
+        // Broad fallbacks when the platform exposes a real MAC on a related Wi-Fi interface.
+        names += listOf("wlan0", "wlan1", "p2p0", "p2p-dev-wlan0", "p2p-dev-wlan1")
+        return names
     }
 
     private fun getWifiDirectIp(ifaceName: String?): String? {
@@ -524,40 +576,46 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     }
 
     private fun getMacFromShell(iface: String?): String? {
-        if (iface == null) return null
-        
-        // Try reading directly from sysfs (often allowed even when ip link is not)
-        try {
-            val file = java.io.File("/sys/class/net/$iface/address")
-            if (file.exists()) {
-                val mac = file.readText().trim().lowercase()
-                if (mac.isNotEmpty() && mac != "00:00:00:00:00:00" && mac != "02:00:00:00:00:00") {
-                    AppLog.i("WifiDirectManager: MAC retrieved via sysfs: $mac")
+        val candidates = buildMacCandidateInterfaceNames(iface)
+
+        for (candidate in candidates) {
+            // Try reading directly from sysfs (often allowed even when ip link is not)
+            try {
+                val file = java.io.File("/sys/class/net/$candidate/address")
+                if (file.exists()) {
+                    val mac = file.readText().trim().lowercase()
+                    AppLog.i("WifiDirectManager: sysfs candidate $candidate reported MAC $mac")
+                    if (isUsableMac(mac)) {
+                        AppLog.i("WifiDirectManager: MAC retrieved via sysfs from $candidate: $mac")
+                        return mac
+                    }
+                }
+            } catch (e: Exception) {
+                AppLog.w("WifiDirectManager: Failed to read MAC from sysfs for $candidate: ${e.message}")
+            }
+
+            try {
+                val process = Runtime.getRuntime().exec("ip link show $candidate")
+                val reader = process.inputStream.bufferedReader()
+                var line: String?
+                var mac: String? = null
+                while (reader.readLine().also { line = it } != null) {
+                    val match = Regex("link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})").find(line ?: "")
+                    if (match != null) {
+                        mac = match.groupValues[1]
+                        break
+                    }
+                }
+                process.waitFor()
+                if (isUsableMac(mac)) {
+                    AppLog.i("WifiDirectManager: MAC retrieved via ip link from $candidate: $mac")
                     return mac
                 }
+            } catch (_: Exception) {
             }
-        } catch (e: Exception) {
-            AppLog.w("WifiDirectManager: Failed to read MAC from sysfs: ${e.message}")
         }
 
-        return try {
-            val process = Runtime.getRuntime().exec("ip link show $iface")
-            val reader = process.inputStream.bufferedReader()
-            var line: String?
-            var mac: String? = null
-            while (reader.readLine().also { line = it } != null) {
-                // Look for "link/ether aa:bb:cc:dd:ee:ff"
-                val match = Regex("link/ether (([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2})").find(line ?: "")
-                if (match != null) {
-                    mac = match.groupValues[1]
-                    break
-                }
-            }
-            process.waitFor()
-            if (mac == "00:00:00:00:00:00" || mac == "02:00:00:00:00:00") null else mac
-        } catch (e: Exception) {
-            null
-        }
+        return null
     }
 
     fun stop() {

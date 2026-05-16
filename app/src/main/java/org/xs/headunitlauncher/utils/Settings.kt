@@ -297,13 +297,14 @@ class Settings(context: Context) {
         get() = prefs.getString("head-unit-model", "Desktop Head Unit")!!
         set(value) { prefs.edit().putString("head-unit-model", value).apply() }
 
-    // 0 = Manual, 1 = Auto (Headunit Server), 2 = Helper (Wifi Launcher), 3 = Native AA
+    // Legacy modes 0/1 are no longer exposed in the UI.
+    // 2 = Helper (Wifi Launcher), 3 = Native AA
     var wifiConnectionMode: Int
         get() {
             // Migration: Check if old helper boolean exists
             if (prefs.contains("wifi-launcher-mode")) {
                 val old = prefs.getBoolean("wifi-launcher-mode", false)
-                val newMode = if (old) 2 else 1
+                val newMode = 2
                 prefs.edit().putInt("wifi-connection-mode", newMode).remove("wifi-launcher-mode").apply()
                 return newMode
             }
@@ -312,9 +313,20 @@ class Settings(context: Context) {
                 prefs.edit().putInt("wifi-connection-mode", 3).remove("native-aa-wireless").apply()
                 return 3
             }
-            return prefs.getInt("wifi-connection-mode", 2) // Default 2 (Wireless Helper)
+            return when (prefs.getInt("wifi-connection-mode", 2)) {
+                3 -> 3
+                else -> 2
+            }
         }
         set(value) { prefs.edit().putInt("wifi-connection-mode", value).apply() }
+
+    var nativeWirelessUnsupported: Boolean
+        get() = prefs.getBoolean("native-wireless-unsupported", false)
+        set(value) { prefs.edit().putBoolean("native-wireless-unsupported", value).apply() }
+
+    var hideNativeWirelessWarning: Boolean
+        get() = prefs.getBoolean("hide-native-wireless-warning", false)
+        set(value) { prefs.edit().putBoolean("hide-native-wireless-warning", value).apply() }
 
     var videoCodec: String
         get() = prefs.getString("video-codec", "Auto")!!
