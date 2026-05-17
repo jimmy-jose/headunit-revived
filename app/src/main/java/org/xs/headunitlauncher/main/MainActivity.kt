@@ -28,7 +28,6 @@ import android.content.res.Configuration
 import androidx.navigation.fragment.NavHostFragment
 import org.xs.headunitlauncher.utils.Settings
 import org.xs.headunitlauncher.utils.LauncherUtils
-import android.os.SystemClock
 import org.xs.headunitlauncher.utils.SetupWizard
 import org.xs.headunitlauncher.utils.SystemUI
 import kotlinx.coroutines.Dispatchers
@@ -97,6 +96,7 @@ class MainActivity : BaseActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState)
 
         logLaunchSource()
@@ -109,14 +109,8 @@ class MainActivity : BaseActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             startActivity(aapIntent)
-            
-            // If we are auto-forwarding, hide the splash immediately to avoid flashing it twice
-            if (savedInstanceState == null) {
-                findViewById<View>(R.id.splash_overlay)?.visibility = View.GONE
-            }
         }
 
-        setTheme(R.style.AppTheme)
         val mainSettings = Settings(this)
         val isNightActive = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (mainSettings.appTheme == Settings.AppTheme.EXTREME_DARK ||
@@ -165,16 +159,6 @@ class MainActivity : BaseActivity() {
             }
         })
 
-        if (savedInstanceState == null) {
-            val elapsedSinceStart = SystemClock.elapsedRealtime() - App.appStartTime
-            val targetTotalDuration = 1200L
-            val actualDelay = (targetTotalDuration - elapsedSinceStart).coerceAtLeast(0L)
-            
-            showSplashWithDelay(actualDelay)
-        } else {
-            findViewById<View>(R.id.splash_overlay)?.visibility = View.GONE
-        }
-
         requestPermissions()
         viewModel.register()
         handleLaunchIntent(intent)
@@ -214,22 +198,6 @@ class MainActivity : BaseActivity() {
                 initialBottom + systemBars.bottom
             )
             insets
-        }
-    }
-
-    private fun showSplashWithDelay(delayMs: Long) {
-        val overlay = findViewById<View>(R.id.splash_overlay) ?: return
-        lifecycleScope.launch(Dispatchers.Main) {
-            if (delayMs > 0) {
-                delay(delayMs)
-            }
-            overlay.animate()
-                .alpha(0f)
-                .setDuration(300)
-                .withEndAction {
-                    overlay.visibility = View.GONE
-                }
-                .start()
         }
     }
 
