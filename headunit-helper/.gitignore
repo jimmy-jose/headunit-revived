@@ -1,0 +1,14 @@
+*.iml
+.gradle
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+todo.txt
+.idea
+# Keystore files
+*.jks
+test_files
+.vscode
