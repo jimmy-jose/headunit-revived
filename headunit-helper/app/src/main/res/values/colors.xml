@@ -23,20 +23,20 @@
     <color name="text_dark">#b5babd</color>
     <color name="black_overlay">#66000000</color>
     
-    <color name="setting_background_color">#F0F0F0</color>
-    <color name="brand_teal">#009688</color>
+    <color name="setting_background_color">#F1F4F2</color>
+    <color name="brand_teal">#006A6A</color>
     <color name="divider_color">#1F000000</color>
     <color name="adaptive_text_color">#DE000000</color>
 
-    <color name="color_projection_blue">#3198ef</color>
+    <color name="color_projection_blue">#1F6C7A</color>
     <color name="color_usb_orange">#f57c00</color>
     <color name="color_wifi_purple">#8e44ad</color>
     <color name="color_settings_darkblue">#2c3e50</color>
 
     <!-- UI Colors Semantic (Mapping to above or new) -->
-    <color name="window_background">#F5F5F5</color>
+    <color name="window_background">#F4FBF8</color>
     <color name="card_background">#FFFFFF</color>
-    <color name="text_title">#000000</color>
-    <color name="text_subtitle">#757575</color>
+    <color name="text_title">#171D1C</color>
+    <color name="text_subtitle">#5C716B</color>
 
 </resources>

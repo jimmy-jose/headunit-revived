@@ -4,16 +4,16 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowNoTitle">true</item>
-        
         <item name="colorPrimary">@color/brand_teal</item>
         <item name="colorSecondary">@color/brand_teal</item>
         <item name="colorAccent">@color/brand_teal</item>
         <item name="android:colorAccent">@color/brand_teal</item>
-        
+        <item name="android:windowBackground">@color/window_background</item>
         <item name="android:statusBarColor" tools:targetApi="21">@android:color/transparent</item>
+        <item name="android:navigationBarColor" tools:targetApi="21">@android:color/transparent</item>
         <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
 
-        <!-- Use Custom Dialog Theme by default -->
         <item name="android:dialogTheme">@style/DarkAlertDialog</item>
         <item name="android:alertDialogTheme">@style/DarkAlertDialog</item>
         <item name="materialAlertDialogTheme">@style/DarkAlertDialog</item>

@@ -714,19 +714,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateButtonState(running: Boolean, connected: Boolean = false) {
         isServiceRunning = running
-        val colorTeal = ContextCompat.getColor(this, R.color.brand_teal)
-        val colorGreen = ContextCompat.getColor(this, android.R.color.holo_green_dark)
+        val colorPrimary = ContextCompat.getColor(this, R.color.brand_teal)
+        val colorTertiary = ContextCompat.getColor(this, R.color.material_green_700)
         if (connected) {
             btnToggleService.text = getString(R.string.connected)
-            btnToggleService.background.setTint(colorGreen)
+            btnToggleService.background.setTint(colorTertiary)
             startPulseAnimation(1500)
         } else if (running) {
             btnToggleService.text = getString(R.string.stop_service)
-            btnToggleService.background.setTint(colorTeal)
+            btnToggleService.background.setTint(colorPrimary)
             startPulseAnimation(800)
         } else {
             btnToggleService.text = getString(R.string.start_service)
-            btnToggleService.background.setTint(colorTeal)
+            btnToggleService.background.setTint(colorPrimary)
             stopPulseAnimation()
         }
     }

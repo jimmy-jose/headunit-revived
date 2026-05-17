@@ -4,6 +4,8 @@
     <string name="start_service">Start Android Auto</string>
     <string name="stop_service">Stop Searching</string>
     <string name="connected">Connected</string>
+    <string name="helper_hero_message">Launch the helper, manage your connection flow, and keep HeadUnitLauncher ready to reconnect quickly.</string>
+    <string name="helper_settings_description">Connection preferences and automation controls for your helper device.</string>
 
     <!-- Connection Mode -->
     <string name="connection_mode_label">Connection Mode</string>
