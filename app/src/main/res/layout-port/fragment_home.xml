@@ -203,7 +203,6 @@
                         android:layout_width="0dp"
                         android:layout_height="0dp"
                         android:minHeight="0dp"
-                        android:layout="3dp"
                         android:layout_margin="3dp"
                         android:background="@drawable/gradient_rust"
                         android:elevation="4dp"

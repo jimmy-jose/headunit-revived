@@ -403,8 +403,15 @@ class MainActivity : BaseActivity() {
         checkSetupFlow()
 
         requestedOrientation = Settings(this).screenOrientation.androidOrientation
-        ContextCompat.registerReceiver(this, orientationReceiver, android.content.IntentFilter(AapService.ACTION_ORIENTATION_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
-        isOrientationReceiverRegistered = true
+        if (!isOrientationReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                this,
+                orientationReceiver,
+                android.content.IntentFilter(AapService.ACTION_ORIENTATION_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            isOrientationReceiverRegistered = true
+        }
 
         // If an Android Auto session is active, bring the projection activity to front
         if (App.provide(this).commManager.isConnected && !App.isPiPActive && !AapProjectionActivity.isForeground) {
