@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/billing_gate_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_gradient"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_pill_translucent"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:id="@+id/billing_gate_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/billing_gate_title"
+            android:textColor="@color/text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/billing_gate_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/billing_status_checking"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp" />
+
+        <ProgressBar
+            android:id="@+id/billing_gate_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/billing_gate_buy_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/billing_buy_button"
+            app:backgroundTint="@color/brand_teal" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/billing_gate_restore_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/billing_restore_button"
+            app:backgroundTint="@color/material_grey_700" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/billing_gate_retry_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/billing_retry_button"
+            app:backgroundTint="@color/material_grey_700" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/billing_gate_exit_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/billing_exit_button"
+            app:backgroundTint="@color/material_grey_700" />
+    </LinearLayout>
+
+</LinearLayout>

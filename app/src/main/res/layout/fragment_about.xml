@@ -82,14 +82,6 @@
                         android:textColor="?attr/colorOnSurface"
                         android:layout_marginBottom="8dp"/>
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/about_owner_name"
-                        android:textAppearance="?attr/textAppearanceTitleLarge"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold"
-                        android:layout_marginBottom="12dp"/>
 
                     <TextView
                         android:id="@+id/about_content_text"
