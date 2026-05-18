@@ -557,13 +557,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun buildConnectionModeOptions(): List<ConnectionModeOption> = buildList {
-        add(ConnectionModeOption(MODE_NSD, getString(R.string.mode_nsd)))
-        add(ConnectionModeOption(MODE_HOTSPOT_PHONE, getString(R.string.mode_hotspot_phone)))
-        add(ConnectionModeOption(MODE_PASSIVE, getString(R.string.mode_passive)))
+        add(ConnectionModeOption(MODE_NEARBY, getString(R.string.mode_nearby)))
         if (deviceSupportsWifiDirect()) {
             add(ConnectionModeOption(MODE_WIFI_DIRECT, getString(R.string.mode_wifi_direct)))
         }
-        add(ConnectionModeOption(MODE_NEARBY, getString(R.string.mode_nearby)))
+        add(ConnectionModeOption(MODE_PASSIVE, getString(R.string.mode_passive)))
+        add(ConnectionModeOption(MODE_NSD, getString(R.string.mode_nsd)))
+        add(ConnectionModeOption(MODE_HOTSPOT_PHONE, getString(R.string.mode_hotspot_phone)))
     }
 
     private fun normalizeConnectionMode(mode: Int): Int {

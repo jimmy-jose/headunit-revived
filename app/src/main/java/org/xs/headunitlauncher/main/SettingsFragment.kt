@@ -584,10 +584,12 @@ class SettingsFragment : Fragment() {
     private fun getVisibleHelperStrategies(): List<HelperStrategyOption> {
         val labels = resources.getStringArray(R.array.helper_strategies)
         val supportsWifiDirect = deviceSupportsWifiDirect()
+        val orderedStrategies = listOf(2, 1, 4, 0, 3)
         return buildList {
-            labels.forEachIndexed { index, label ->
-                if (index == 1 && !supportsWifiDirect) return@forEachIndexed
-                add(HelperStrategyOption(strategy = index, label = label))
+            orderedStrategies.forEach { strategy ->
+                if (strategy == 1 && !supportsWifiDirect) return@forEach
+                val label = labels.getOrNull(strategy) ?: return@forEach
+                add(HelperStrategyOption(strategy = strategy, label = label))
             }
         }
     }
