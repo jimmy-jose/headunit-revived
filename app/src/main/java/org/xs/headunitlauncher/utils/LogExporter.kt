@@ -165,7 +165,7 @@ object LogExporter {
         }
     }
 
-    fun shareLogFile(context: Context, file: File) {
+    fun shareLogFile(context: Context, file: File, chooserTitle: String = "Share Log File") {
         val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -174,7 +174,7 @@ object LogExporter {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
 
-        val chooser = Intent.createChooser(shareIntent, "Share Log File")
+        val chooser = Intent.createChooser(shareIntent, chooserTitle)
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }

@@ -34,6 +34,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.xs.hulhelper.connection.WifiDirectNameDiscoveryManager
+import org.xs.hulhelper.utils.CrashReportStore
 import java.io.File
 import java.io.FileOutputStream
 
@@ -53,6 +54,9 @@ class MainActivity : AppCompatActivity() {
     ) { _: Boolean -> }
 
     private lateinit var btnToggleService: Button
+    private lateinit var cardCrashReport: View
+    private lateinit var tvCrashReportMessage: TextView
+    private lateinit var btnIgnoreCrashReport: Button
     private lateinit var layoutConnectionMode: View
     private lateinit var tvConnectionModeValue: TextView
     private lateinit var layoutStaticIp: View
@@ -163,6 +167,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun initializeViews() {
         btnToggleService = findViewById(R.id.btnToggleService)
+        cardCrashReport = findViewById(R.id.cardCrashReport)
+        tvCrashReportMessage = findViewById(R.id.tvCrashReportMessage)
+        btnIgnoreCrashReport = findViewById(R.id.btnIgnoreCrashReport)
         layoutConnectionMode = findViewById(R.id.layoutConnectionMode)
         tvConnectionModeValue = findViewById(R.id.tvConnectionModeValue)
         layoutStaticIp = findViewById(R.id.layoutStaticIp)
@@ -204,6 +211,20 @@ class MainActivity : AppCompatActivity() {
         layoutStaticIp.setOnClickListener { showStaticIpDialog() }
         
         layoutExportLog.setOnClickListener { exportLogs() }
+
+        cardCrashReport.setOnClickListener {
+            val shared = CrashReportStore.sharePendingReport(this)
+            if (!shared) {
+                Toast.makeText(this, R.string.crash_report_missing, Toast.LENGTH_SHORT).show()
+                updateCrashReportBanner()
+            }
+        }
+
+        btnIgnoreCrashReport.setOnClickListener {
+            CrashReportStore.ignorePendingReport(this)
+            updateCrashReportBanner()
+            Toast.makeText(this, R.string.crash_report_ignored, Toast.LENGTH_SHORT).show()
+        }
 
         btnToggleService.setOnClickListener {
             if (isServiceRunning) {
@@ -499,6 +520,21 @@ class MainActivity : AppCompatActivity() {
         val langIndex = languageTags.indexOf(langTag).coerceAtLeast(0)
         tvLanguageValue.text = languageOptions[langIndex]
         updateButtonState(WirelessHelperService.isRunning, WirelessHelperService.isConnected)
+        updateCrashReportBanner()
+    }
+
+    private fun updateCrashReportBanner() {
+        val report = CrashReportStore.getPendingReport(this)
+        cardCrashReport.visibility = if (report == null) View.GONE else View.VISIBLE
+        tvCrashReportMessage.text = if (report == null) {
+            ""
+        } else {
+            getString(
+                R.string.crash_report_ready_message,
+                CrashReportStore.formatTimestamp(report.capturedAtMillis),
+                report.summary
+            )
+        }
     }
 
     private fun migrateSettings(prefs: android.content.SharedPreferences) {
@@ -996,6 +1032,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         handler.post(statusPoller)
+        updateCrashReportBanner()
         checkBatteryOptimization()
         checkOverlayPermission()
         

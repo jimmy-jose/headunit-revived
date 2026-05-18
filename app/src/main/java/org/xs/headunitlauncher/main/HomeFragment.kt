@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import org.xs.headunitlauncher.utils.LauncherUtils
+import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.Settings
 import org.xs.headunitlauncher.utils.VpnControl
 import java.text.SimpleDateFormat
@@ -85,6 +86,9 @@ class HomeFragment : Fragment() {
     private lateinit var wifi: Button
     private lateinit var connectionInfoButton: ImageButton
     private lateinit var wifi_text_view: TextView
+    private var crashReportContainer: View? = null
+    private var crashReportText: TextView? = null
+    private var crashReportIgnoreButton: Button? = null
     private var nativeWirelessWarningContainer: View? = null
     private var nativeWirelessWarningText: TextView? = null
     private var nativeWirelessSwitchButton: Button? = null
@@ -133,6 +137,9 @@ class HomeFragment : Fragment() {
         wifi = view.findViewById(R.id.wifi_button)
         connectionInfoButton = view.findViewById(R.id.connection_info_button)
         wifi_text_view = view.findViewById(R.id.wifi_text)
+        crashReportContainer = view.findViewById(R.id.crash_report_container)
+        crashReportText = view.findViewById(R.id.crash_report_text)
+        crashReportIgnoreButton = view.findViewById(R.id.crash_report_ignore_button)
         nativeWirelessWarningContainer = view.findViewById(R.id.native_wireless_warning_container)
         nativeWirelessWarningText = view.findViewById(R.id.native_wireless_warning_text)
         nativeWirelessSwitchButton = view.findViewById(R.id.native_wireless_switch_button)
@@ -189,6 +196,7 @@ class HomeFragment : Fragment() {
         setupListeners()
         updateProjectionButtonText()
         updateLauncherUi()
+        updateCrashReportBanner()
         updateNativeWirelessWarning()
         loadHomeApps()
 
@@ -455,6 +463,20 @@ class HomeFragment : Fragment() {
             showConnectionInfoDialog()
         }
 
+        crashReportContainer?.setOnClickListener {
+            val shared = CrashReportStore.sharePendingReport(requireContext())
+            if (!shared) {
+                Toast.makeText(requireContext(), R.string.crash_report_missing, Toast.LENGTH_SHORT).show()
+                updateCrashReportBanner()
+            }
+        }
+
+        crashReportIgnoreButton?.setOnClickListener {
+            CrashReportStore.ignorePendingReport(requireContext())
+            updateCrashReportBanner()
+            Toast.makeText(requireContext(), R.string.crash_report_ignored, Toast.LENGTH_SHORT).show()
+        }
+
         appDrawerHandle.setOnClickListener {
             toggleAppDrawer()
         }
@@ -538,6 +560,7 @@ class HomeFragment : Fragment() {
         AppLog.i("HomeFragment: onResume. isConnected=${commManager.isConnected}")
         updateProjectionButtonText()
         updateLauncherUi()
+        updateCrashReportBanner()
         loadHomeApps()
         updateDrawerUi(appDrawerBehavior.state == BottomSheetBehavior.STATE_EXPANDED)
         updateNativeWirelessWarning()
@@ -559,6 +582,20 @@ class HomeFragment : Fragment() {
             !appSettings.hideNativeWirelessWarning
         nativeWirelessWarningContainer?.visibility = if (shouldShow) View.VISIBLE else View.GONE
         nativeWirelessWarningText?.text = getString(R.string.native_wireless_home_warning)
+    }
+
+    private fun updateCrashReportBanner() {
+        val report = CrashReportStore.getPendingReport(requireContext())
+        crashReportContainer?.visibility = if (report == null) View.GONE else View.VISIBLE
+        crashReportText?.text = if (report == null) {
+            ""
+        } else {
+            getString(
+                R.string.crash_report_ready_message,
+                CrashReportStore.formatTimestamp(report.capturedAtMillis),
+                report.summary
+            )
+        }
     }
 
     private fun switchToWirelessHelper() {

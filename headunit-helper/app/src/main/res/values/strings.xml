@@ -79,6 +79,12 @@
     <string name="export_log_title">Logs Exported</string>
     <string name="export_log_saved">Logs have been saved to:\n\n%s</string>
     <string name="share">Share</string>
+    <string name="crash_report_ready_title">Crash report ready</string>
+    <string name="crash_report_ready_message">The helper recovered from a crash on %1$s.\nTap here to share the saved report.\n%2$s</string>
+    <string name="share_crash_report">Share crash report</string>
+    <string name="ignore_report">Ignore</string>
+    <string name="crash_report_missing">The saved crash report is no longer available.</string>
+    <string name="crash_report_ignored">Crash report ignored</string>
 
     <!-- Language -->
     <string name="language_label">Language</string>

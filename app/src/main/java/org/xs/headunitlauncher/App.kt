@@ -14,6 +14,7 @@ import org.xs.headunitlauncher.aap.AapNavigation
 import org.xs.headunitlauncher.ssl.ConscryptInitializer
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.AppThemeManager
+import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.Settings
 import android.os.SystemClock
 import java.io.File
@@ -31,6 +32,8 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        CrashReportStore.install(this)
         
         // Enable vector drawable support on older Android versions
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true)
