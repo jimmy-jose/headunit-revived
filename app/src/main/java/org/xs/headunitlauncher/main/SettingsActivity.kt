@@ -1,14 +1,23 @@
 package org.xs.headunitlauncher.main
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.navigation.fragment.NavHostFragment
 import android.content.res.Configuration
 import android.os.Build
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.app.BaseActivity
+import org.xs.headunitlauncher.billing.AccessState
+import org.xs.headunitlauncher.billing.BillingGateActivity
 import org.xs.headunitlauncher.utils.Settings
 import org.xs.headunitlauncher.utils.SystemUI
 
@@ -31,6 +40,10 @@ class SettingsActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        if (redirectToBillingGateIfNeeded(skipPassedIntent = false)) {
+            return
+        }
 
         val appSettings = Settings(this)
         val isNightActive = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -62,6 +75,7 @@ class SettingsActivity : BaseActivity() {
 
         val root = findViewById<View>(R.id.settings_nav_host)
         SystemUI.apply(window, root, appSettings.fullscreenMode)
+        observeBillingAccess()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -81,6 +95,44 @@ class SettingsActivity : BaseActivity() {
             val appSettings = Settings(this)
             val root = findViewById<View>(R.id.settings_nav_host)
             SystemUI.apply(window, root, appSettings.fullscreenMode)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (redirectToBillingGateIfNeeded(skipPassedIntent = true)) {
+            return
+        }
+        App.provide(this).billingAccessManager.refreshAccessState()
+    }
+
+    private fun redirectToBillingGateIfNeeded(skipPassedIntent: Boolean): Boolean {
+        val accessManager = App.provide(this).billingAccessManager
+        if (!accessManager.isBillingEnforced) return false
+        if (!skipPassedIntent && BillingGateActivity.wasGatePassed(intent)) return false
+        if (accessManager.canUseAppCached()) return false
+
+        val forwardIntent = Intent(intent ?: Intent(this, SettingsActivity::class.java)).apply {
+            setClass(this@SettingsActivity, SettingsActivity::class.java)
+        }
+        startActivity(BillingGateActivity.createIntent(this, forwardIntent))
+        finish()
+        return true
+    }
+
+    private fun observeBillingAccess() {
+        val accessManager = App.provide(this).billingAccessManager
+        if (!accessManager.isBillingEnforced) return
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                accessManager.accessState.collect { state ->
+                    if ((state == AccessState.LOCKED || state == AccessState.ERROR_RETRYABLE) &&
+                        !accessManager.canUseAppCached()) {
+                        redirectToBillingGateIfNeeded(skipPassedIntent = true)
+                    }
+                }
+            }
         }
     }
 }

@@ -109,6 +109,7 @@ android {
         // Store available locales in BuildConfig for runtime access
         // This is scanned at build time from values-XX directories
         buildConfigField("String", "AVAILABLE_LOCALES", "\"${availableLocales.joinToString(",")}\"")
+        buildConfigField("String", "PLAYSTORE_UNLOCK_PRODUCT_ID", "\"\"")
 
         externalNativeBuild {
             cmake {
@@ -122,6 +123,7 @@ android {
         create("playstore") {
             dimension = "distribution"
             minSdk = 21
+            buildConfigField("String", "PLAYSTORE_UNLOCK_PRODUCT_ID", "\"headunitlauncher_unlock\"")
         }
         create("github") {
             dimension = "distribution"
@@ -206,4 +208,8 @@ kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_1_8)
     }
+}
+
+afterEvaluate {
+    dependencies.add("playstoreImplementation", "com.android.billingclient:billing-ktx:7.1.1")
 }

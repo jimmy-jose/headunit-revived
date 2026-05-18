@@ -181,6 +181,11 @@
             android:label="@string/settings"
             android:theme="@style/AppTheme" />
 
+        <activity
+            android:name=".billing.BillingGateActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme" />
+
         <service
             android:name=".aap.AapService"
             android:foregroundServiceType="connectedDevice|mediaPlayback"

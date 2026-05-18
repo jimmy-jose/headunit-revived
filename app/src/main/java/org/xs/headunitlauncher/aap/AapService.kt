@@ -31,6 +31,7 @@ import androidx.core.content.IntentCompat
 import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.app.BootCompleteReceiver
 import org.xs.headunitlauncher.app.WifiAutoStartReceiver
+import org.xs.headunitlauncher.billing.BillingAccessEnforcer
 import org.xs.headunitlauncher.main.MainActivity
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.aap.protocol.messages.NightModeEvent
@@ -633,6 +634,13 @@ class AapService : Service(), UsbReceiver.Listener {
         } else {
             startForeground(1, createNotification())
         }
+
+        if (!BillingAccessEnforcer.canUseAppCached(this)) {
+            AppLog.w("AapService: access blocked by billing gate, stopping service startup")
+            stopForeground(true)
+            stopSelf()
+            return
+        }
         setupCarMode()
         setupNightMode()
         observeConnectionState()
@@ -705,6 +713,22 @@ class AapService : Service(), UsbReceiver.Listener {
 
         checkAlreadyConnectedUsb()
         registerNetworkMonitor()
+
+        serviceScope.launch {
+            while (isActive) {
+                delay(60_000)
+                if (!BillingAccessEnforcer.canUseAppCached(this@AapService)) {
+                    AppLog.w("AapService: access expired while running, disconnecting and stopping")
+                    if (commManager.isConnected) {
+                        commManager.disconnect(sendByeBye = true)
+                    }
+                    launchMainActivityOnBoot()
+                    stopForeground(true)
+                    stopSelf()
+                    break
+                }
+            }
+        }
     }
 
     /** Enables Android Automotive UI mode so the system uses car-optimised layouts. */
@@ -1533,6 +1557,27 @@ class AapService : Service(), UsbReceiver.Listener {
             })
             isDestroying = true
             if (commManager.isConnected) commManager.disconnect(sendByeBye = true)
+            stopForeground(true)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+
+        val actionRequiringAccess = when (intent?.action) {
+            null,
+            Intent.ACTION_MAIN,
+            ACTION_START_SELF_MODE,
+            ACTION_START_WIRELESS,
+            ACTION_START_WIRELESS_SCAN,
+            ACTION_NATIVE_AA_POKE,
+            ACTION_NEARBY_CONNECT,
+            ACTION_CONNECT_SOCKET,
+            ACTION_CHECK_USB -> true
+            else -> false
+        }
+
+        if (actionRequiringAccess && !BillingAccessEnforcer.canUseAppCached(this)) {
+            AppLog.w("AapService: blocked action=${intent?.action ?: "<default>"} by billing gate")
+            launchMainActivityOnBoot()
             stopForeground(true)
             stopSelf()
             return START_NOT_STICKY

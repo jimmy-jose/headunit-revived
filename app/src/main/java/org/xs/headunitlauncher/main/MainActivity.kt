@@ -17,12 +17,16 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
 import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.aap.AapProjectionActivity
 import org.xs.headunitlauncher.aap.AapService
 import org.xs.headunitlauncher.app.BaseActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import org.xs.headunitlauncher.billing.AccessState
+import org.xs.headunitlauncher.billing.BillingGateActivity
 import org.xs.headunitlauncher.utils.AppLog
 import android.content.res.Configuration
 import androidx.navigation.fragment.NavHostFragment
@@ -98,6 +102,10 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState)
+
+        if (redirectToBillingGateIfNeeded(skipPassedIntent = false)) {
+            return
+        }
 
         logLaunchSource()
 
@@ -178,6 +186,8 @@ class MainActivity : BaseActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         isRecreateReceiverRegistered = true
+
+        observeBillingAccess()
     }
 
     private fun applySafeAreaPadding() {
@@ -366,7 +376,13 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        if (redirectToBillingGateIfNeeded(skipPassedIntent = true)) {
+            return
+        }
+
         setFullscreen()
+        App.provide(this).billingAccessManager.refreshAccessState()
 
         checkSetupFlow()
 
@@ -416,6 +432,36 @@ class MainActivity : BaseActivity() {
 
         if (appSettings.shouldPromptForLauncher && !LauncherUtils.isDefaultHomeApp(this)) {
             LauncherPromptDialog.show(supportFragmentManager)
+        }
+    }
+
+    private fun redirectToBillingGateIfNeeded(skipPassedIntent: Boolean): Boolean {
+        val accessManager = App.provide(this).billingAccessManager
+        if (!accessManager.isBillingEnforced) return false
+        if (!skipPassedIntent && BillingGateActivity.wasGatePassed(intent)) return false
+        if (accessManager.canUseAppCached()) return false
+
+        val forwardIntent = Intent(intent ?: Intent(this, MainActivity::class.java)).apply {
+            setClass(this@MainActivity, MainActivity::class.java)
+        }
+        startActivity(BillingGateActivity.createIntent(this, forwardIntent))
+        finish()
+        return true
+    }
+
+    private fun observeBillingAccess() {
+        val accessManager = App.provide(this).billingAccessManager
+        if (!accessManager.isBillingEnforced) return
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                accessManager.accessState.collectLatest { state ->
+                    if ((state == AccessState.LOCKED || state == AccessState.ERROR_RETRYABLE) &&
+                        !accessManager.canUseAppCached()) {
+                        redirectToBillingGateIfNeeded(skipPassedIntent = true)
+                    }
+                }
+            }
         }
     }
 

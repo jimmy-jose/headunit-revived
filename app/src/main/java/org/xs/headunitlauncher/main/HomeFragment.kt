@@ -89,6 +89,8 @@ class HomeFragment : Fragment() {
     private var crashReportContainer: View? = null
     private var crashReportText: TextView? = null
     private var crashReportIgnoreButton: Button? = null
+    private var trialBannerContainer: View? = null
+    private var trialBannerText: TextView? = null
     private var nativeWirelessWarningContainer: View? = null
     private var nativeWirelessWarningText: TextView? = null
     private var nativeWirelessSwitchButton: Button? = null
@@ -140,6 +142,8 @@ class HomeFragment : Fragment() {
         crashReportContainer = view.findViewById(R.id.crash_report_container)
         crashReportText = view.findViewById(R.id.crash_report_text)
         crashReportIgnoreButton = view.findViewById(R.id.crash_report_ignore_button)
+        trialBannerContainer = view.findViewById(R.id.trial_banner_container)
+        trialBannerText = view.findViewById(R.id.trial_banner_text)
         nativeWirelessWarningContainer = view.findViewById(R.id.native_wireless_warning_container)
         nativeWirelessWarningText = view.findViewById(R.id.native_wireless_warning_text)
         nativeWirelessSwitchButton = view.findViewById(R.id.native_wireless_switch_button)
@@ -197,6 +201,7 @@ class HomeFragment : Fragment() {
         updateProjectionButtonText()
         updateLauncherUi()
         updateCrashReportBanner()
+        updateTrialBanner()
         updateNativeWirelessWarning()
         loadHomeApps()
 
@@ -561,6 +566,7 @@ class HomeFragment : Fragment() {
         updateProjectionButtonText()
         updateLauncherUi()
         updateCrashReportBanner()
+        updateTrialBanner()
         loadHomeApps()
         updateDrawerUi(appDrawerBehavior.state == BottomSheetBehavior.STATE_EXPANDED)
         updateNativeWirelessWarning()
@@ -595,6 +601,36 @@ class HomeFragment : Fragment() {
                 CrashReportStore.formatTimestamp(report.capturedAtMillis),
                 report.summary
             )
+        }
+    }
+
+    private fun updateTrialBanner() {
+        val accessManager = App.provide(requireContext()).billingAccessManager
+        if (!accessManager.isBillingEnforced) {
+            trialBannerContainer?.visibility = View.GONE
+            return
+        }
+
+        val remainingMs = accessManager.getTrialRemainingMs()
+        val shouldShow = remainingMs in 1 until (24L * 60L * 60L * 1000L)
+        trialBannerContainer?.visibility = if (shouldShow) View.VISIBLE else View.GONE
+        if (shouldShow) {
+            trialBannerText?.text = getString(
+                R.string.billing_trial_banner,
+                formatTrialRemaining(remainingMs)
+            )
+        }
+    }
+
+    private fun formatTrialRemaining(remainingMs: Long): String {
+        val totalMinutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(remainingMs).coerceAtLeast(0)
+        val days = totalMinutes / (60 * 24)
+        val hours = (totalMinutes % (60 * 24)) / 60
+        val minutes = totalMinutes % 60
+        return when {
+            days > 0 -> getString(R.string.billing_trial_remaining_days_hours, days, hours)
+            hours > 0 -> getString(R.string.billing_trial_remaining_hours_minutes, hours, minutes)
+            else -> getString(R.string.billing_trial_remaining_minutes, minutes.coerceAtLeast(1))
         }
     }
 

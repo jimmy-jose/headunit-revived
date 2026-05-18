@@ -3,6 +3,7 @@ package org.xs.headunitlauncher
 import android.app.NotificationManager
 import android.content.Context
 import android.net.wifi.WifiManager
+import org.xs.headunitlauncher.billing.BillingAccessManagerFactory
 import org.xs.headunitlauncher.connection.CommManager
 import org.xs.headunitlauncher.decoder.AudioDecoder
 import org.xs.headunitlauncher.decoder.VideoDecoder
@@ -11,6 +12,7 @@ import org.xs.headunitlauncher.utils.Settings
 class AppComponent(private val app: App) {
 
     val settings = Settings(app)
+    val billingAccessManager = BillingAccessManagerFactory.create(app, settings)
     val videoDecoder = VideoDecoder(settings)
     val audioDecoder = AudioDecoder()
 

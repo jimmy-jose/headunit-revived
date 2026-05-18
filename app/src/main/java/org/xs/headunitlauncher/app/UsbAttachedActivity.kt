@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.aap.AapService
+import org.xs.headunitlauncher.billing.BillingAccessEnforcer
 import org.xs.headunitlauncher.connection.CommManager
 import org.xs.headunitlauncher.connection.UsbAccessoryMode
 import org.xs.headunitlauncher.connection.UsbDeviceCompat
@@ -60,6 +61,18 @@ class UsbAttachedActivity : Activity() {
                       !(getSystemService(Context.USER_SERVICE) as UserManager).isUserUnlocked
 
         val settings = if (!isLocked) Settings(this) else null
+
+        if (!BillingAccessEnforcer.ensureAccessOrLaunchGate(
+                this,
+                "USB auto-start",
+                Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "USB auto-start")
+                }
+            )) {
+            finish()
+            return
+        }
 
         if (!isLocked) {
             if (App.provide(this).commManager.connectionState.value is CommManager.ConnectionState.TransportStarted) {

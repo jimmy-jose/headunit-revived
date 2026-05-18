@@ -344,6 +344,26 @@ class Settings(context: Context) {
         get() = prefs.getBoolean("has-completed-setup-wizard", false)
         set(value) { prefs.edit().putBoolean("has-completed-setup-wizard", value).apply() }
 
+    var billingTrialStartedAtMs: Long
+        get() = prefs.getLong("billing-trial-started-at-ms", 0L)
+        set(value) { prefs.edit().putLong("billing-trial-started-at-ms", value).apply() }
+
+    var billingLastPurchaseState: Int
+        get() = prefs.getInt("billing-last-purchase-state", 0)
+        set(value) { prefs.edit().putInt("billing-last-purchase-state", value).apply() }
+
+    var billingLastPurchaseToken: String
+        get() = prefs.getString("billing-last-purchase-token", "")!!
+        set(value) { prefs.edit().putString("billing-last-purchase-token", value).apply() }
+
+    var billingLastCheckAtMs: Long
+        get() = prefs.getLong("billing-last-check-at-ms", 0L)
+        set(value) { prefs.edit().putLong("billing-last-check-at-ms", value).apply() }
+
+    var billingLastProductId: String
+        get() = prefs.getString("billing-last-product-id", "")!!
+        set(value) { prefs.edit().putString("billing-last-product-id", value).apply() }
+
     var autoConnectLastSession: Boolean
         get() = prefs.getBoolean("auto-connect-last-session", false)
         set(value) { prefs.edit().putBoolean("auto-connect-last-session", value).apply() }

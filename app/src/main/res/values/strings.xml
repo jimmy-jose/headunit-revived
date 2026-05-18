@@ -140,6 +140,24 @@
     <string name="ignore_report">Ignore</string>
     <string name="crash_report_missing">The saved crash report is no longer available.</string>
     <string name="crash_report_ignored">Crash report ignored</string>
+    <string name="billing_gate_title">Unlock HeadUnitLauncher</string>
+    <string name="billing_status_checking">Checking your unlock and trial status…</string>
+    <string name="billing_trial_active_message">Your 7-day local trial is active.\nTime remaining: %1$s</string>
+    <string name="billing_unlocked_message">This copy is unlocked. Opening HeadUnitLauncher…</string>
+    <string name="billing_locked_message">Your 7-day local trial has ended. Purchase the permanent unlock to keep using HeadUnitLauncher.</string>
+    <string name="billing_status_error_retryable">We could not verify your Google Play entitlement right now. Retry or restore purchases. Trial access still works only while the local trial remains active.</string>
+    <string name="billing_buy_button">Buy permanent unlock</string>
+    <string name="billing_restore_button">Restore purchases</string>
+    <string name="billing_retry_button">Check again</string>
+    <string name="billing_exit_button">Exit</string>
+    <string name="billing_trial_banner">Trial active: %1$s remaining</string>
+    <string name="billing_trial_remaining_days_hours">%1$d day(s) %2$d hour(s)</string>
+    <string name="billing_trial_remaining_hours_minutes">%1$d hour(s) %2$d minute(s)</string>
+    <string name="billing_trial_remaining_minutes">%1$d minute(s)</string>
+    <string name="billing_purchase_unavailable">Purchase details are not available yet. Please try again.</string>
+    <string name="billing_purchase_cancelled">Purchase cancelled.</string>
+    <string name="billing_purchase_pending">Your purchase is pending confirmation from Google Play.</string>
+    <string name="billing_access_blocked">Payment is required before you can continue using HeadUnitLauncher.</string>
     <string name="use_native_ssl">Use Native SSL</string>
     <string name="use_native_ssl_description">Use native OpenSSL library (faster on older devices). Requires restart.</string>
     <string name="not_set">Not Set</string>
@@ -298,7 +316,12 @@
     <string name="about_description">Get more information about HeadUnitLauncher</string>
     <string name="version">Version</string>
     <string name="about_title">About HeadUnitLauncher</string>
-    <string name="copyright">© 2025-%d André Rinas</string>
+    <string name="about_owner_name">Jimmy</string>
+    <string name="about_summary">HeadUnitLauncher brings Android Auto to supported Android-based head units with launch, connection, and wireless helper options in one place. Use the button below to send feedback or a bug report with device details that help with debugging.</string>
+    <string name="about_feedback_button">Send Feedback</string>
+    <string name="about_feedback_body_intro">Please describe the issue, question, or feedback below this line.</string>
+    <string name="about_feedback_unavailable">No email app is available on this device.</string>
+    <string name="copyright">© 2025-%d Jimmy</string>
 
     <!-- Safety Disclaimer -->
     <string name="disclaimer_title">Safety &amp; Liability</string>

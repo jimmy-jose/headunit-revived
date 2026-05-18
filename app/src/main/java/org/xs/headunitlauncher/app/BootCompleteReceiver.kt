@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import org.xs.headunitlauncher.aap.AapService
+import org.xs.headunitlauncher.billing.BillingAccessEnforcer
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.Settings
 import android.os.UserManager
@@ -30,6 +31,13 @@ class BootCompleteReceiver : BroadcastReceiver() {
         val screenOnEnabled = Settings.isAutoStartOnScreenOnEnabled(context)
         val usbEnabled = Settings.isAutoStartOnUsbEnabled(context)
         val wifiEnabled = Settings.isAutoStartOnWifiEnabled(context)
+
+        val anyAutoStartEnabled = bootEnabled || screenOnEnabled || usbEnabled || wifiEnabled
+        if (anyAutoStartEnabled &&
+            !BillingAccessEnforcer.ensureAccessOrLaunchGate(context, "Boot auto-start")) {
+            AppLog.i("Boot auto-start: blocked by billing gate")
+            return
+        }
 
         if (bootEnabled) {
             AppLog.i("Boot auto-start: starting AapService with BOOT_START (trigger=$action)")

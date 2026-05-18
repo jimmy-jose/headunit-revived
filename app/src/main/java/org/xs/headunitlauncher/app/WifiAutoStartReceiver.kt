@@ -14,6 +14,7 @@ import android.app.PendingIntent
 import androidx.core.app.NotificationCompat
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.aap.AapService
+import org.xs.headunitlauncher.billing.BillingAccessEnforcer
 import org.xs.headunitlauncher.main.MainActivity
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.Settings
@@ -61,6 +62,18 @@ class WifiAutoStartReceiver : BroadcastReceiver() {
                 // Don't trigger if already connected
                 if (App.provide(context).commManager.isConnected) {
                     AppLog.d("WifiAutoStartReceiver: Already connected to Android Auto. Ignoring event.")
+                    return
+                }
+
+                if (!BillingAccessEnforcer.ensureAccessOrLaunchGate(
+                        context,
+                        "WiFi auto-start",
+                        Intent(context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "WiFi auto-start")
+                        }
+                    )) {
+                    AppLog.i("WifiAutoStartReceiver: blocked by billing gate")
                     return
                 }
 

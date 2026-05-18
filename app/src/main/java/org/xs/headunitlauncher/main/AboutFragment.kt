@@ -1,17 +1,20 @@
 package org.xs.headunitlauncher.main
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.text.Html
-import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import org.xs.headunitlauncher.R
 import com.google.android.material.appbar.MaterialToolbar
+import org.xs.headunitlauncher.BuildConfig
+import org.xs.headunitlauncher.R
 import java.util.Calendar
 
 class AboutFragment : Fragment() {
@@ -32,67 +35,42 @@ class AboutFragment : Fragment() {
         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
         copyrightText.text = getString(R.string.copyright, currentYear)
 
-        val contentText = view.findViewById<TextView>(R.id.about_content_text)
-        
-        val sb = StringBuilder()
-        sb.append("<b>Special thanks to Mike Reidis for the original idea and android auto protocol and code.</b><br/>")
-        sb.append("<a href=\"https://github.com/mikereidis/headunit\">https://github.com/mikereidis/headunit</a><br/><br/>")
-        sb.append("<h3>Issues, bugs, and feedback or questions</h3>")
-        sb.append("If you need any help, go to the github page of this app. You will additionally can support me via <a href=\"https://www.paypal.me/anrinas\">Paypal</a><br/>")
-        sb.append("<a href=\"https://github.com/andreknieriem/headunit-revived\">https://github.com/andreknieriem/headunit-revived</a><br/><br/>")
-
-        sb.append(parseMarkdownToHtml(readAsset("CHANGELOG.md")))
-        sb.append("<br/><br/>")
-
-        sb.append("<h3>LICENSE</h3>")
-        // License is plain text, preserve newlines
-        val license = readAsset("LICENSE").replace("\n", "<br/>")
-        sb.append(license)
-
-        contentText.text = fromHtml(sb.toString())
-        contentText.movementMethod = android.text.method.LinkMovementMethod.getInstance() // Make links clickable
-    }
-
-    private fun readAsset(fileName: String): String {
-        return try {
-            requireContext().assets.open(fileName).bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            "Error loading $fileName"
+        view.findViewById<Button>(R.id.feedback_button).setOnClickListener {
+            val intent = createFeedbackIntent()
+            val packageManager = requireContext().packageManager
+            if (intent.resolveActivity(packageManager) != null) {
+                startActivity(intent)
+            } else {
+                Toast.makeText(requireContext(), R.string.about_feedback_unavailable, Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    private fun parseMarkdownToHtml(markdown: String): String {
-        var html = markdown
-        // Headers
-        html = html.replace(Regex("### (.*)"), "<h4>$1</h4>")
-        html = html.replace(Regex("## (.*)"), "<h3>$1</h3>")
-        html = html.replace(Regex("# (.*)"), "<h2>$1</h2>")
-        
-        // Bold
-        html = html.replace(Regex("\\*\\*(.*?)\\*\\*"), "<b>$1</b>")
-        
-        // Lists
-        html = html.replace(Regex("\n- (.*)"), "<br/>&#8226; $1")
-        
-        // Newlines (Markdown preserves single newlines as space, but we want break for readability in log?)
-        // Actually, let's just replace double newlines with paragraph, and single with br?
-        // Simple approach: Replace \n with <br/> but be careful not to break tags.
-        // For list items we already handled the newline prefix.
-        
-        // Let's replace remaining newlines that are not part of tags
-        // This is tricky with regex. 
-        // Better: replace all \n with <br/> at the end?
-        // The list replacement consumed the \n before the dash.
-        
-        return html
-    }
+    private fun createFeedbackIntent(): Intent {
+        val body = buildString {
+            appendLine(getString(R.string.about_feedback_body_intro))
+            appendLine()
+            appendLine("App Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine("Build Flavor: ${BuildConfig.FLAVOR}")
+            appendLine("Manufacturer: ${Build.MANUFACTURER}")
+            appendLine("Brand: ${Build.BRAND}")
+            appendLine("Model: ${Build.MODEL}")
+            appendLine("Device: ${Build.DEVICE}")
+            appendLine("Product: ${Build.PRODUCT}")
+            appendLine("Android Version: ${Build.VERSION.RELEASE}")
+            appendLine("SDK: ${Build.VERSION.SDK_INT}")
+            appendLine("Fingerprint: ${Build.FINGERPRINT}")
+        }
 
-    private fun fromHtml(html: String): Spanned {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            Html.fromHtml(html, Html.FROM_HTML_MODE_LEGACY)
-        } else {
-            @Suppress("DEPRECATION")
-            Html.fromHtml(html)
+        val mailtoUri = Uri.Builder()
+            .scheme("mailto")
+            .opaquePart("jimmy.jose96@gmail.com")
+            .appendQueryParameter("subject", "HUL Feedback")
+            .appendQueryParameter("body", body)
+            .build()
+
+        return Intent(Intent.ACTION_SENDTO).apply {
+            data = mailtoUri
         }
     }
 }

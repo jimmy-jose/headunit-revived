@@ -287,7 +287,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         ContextCompat.registerReceiver(this, finishReceiver, android.content.IntentFilter("org.xs.headunitlauncher.ACTION_FINISH_ACTIVITIES"), ContextCompat.RECEIVER_NOT_EXPORTED)
         isFinishReceiverRegistered = true
 
-        AppLog.i("HeadUnit for Android Auto (tm) - Copyright 2011-2015 Michael A. Reid., since 2025 André Rinas All Rights Reserved...")
+        AppLog.i("HeadUnit for Android Auto")
 
         val container = findViewById<android.widget.FrameLayout>(R.id.container)
         val displayMetrics = resources.displayMetrics

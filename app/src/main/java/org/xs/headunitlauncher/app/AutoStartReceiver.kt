@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import org.xs.headunitlauncher.aap.AapService
+import org.xs.headunitlauncher.billing.BillingAccessEnforcer
 import org.xs.headunitlauncher.connection.CommManager
 import org.xs.headunitlauncher.main.MainActivity
 import org.xs.headunitlauncher.utils.AppLog
@@ -66,6 +67,18 @@ class AutoStartReceiver : BroadcastReceiver() {
                 }
                 lastMatchedMac = targetMac
                 lastMatchElapsedRealtime = now
+
+                if (!BillingAccessEnforcer.ensureAccessOrLaunchGate(
+                        context,
+                        "Bluetooth auto-start",
+                        Intent(context, MainActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            putExtra(MainActivity.EXTRA_LAUNCH_SOURCE, "Bluetooth auto-start")
+                        }
+                    )) {
+                    AppLog.i("AutoStartReceiver: blocked by billing gate")
+                    return
+                }
 
                 AppLog.i("MATCH! Starting AapService via Bluetooth Auto-start...")
                 
