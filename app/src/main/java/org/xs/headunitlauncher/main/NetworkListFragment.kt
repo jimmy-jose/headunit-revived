@@ -175,7 +175,7 @@ class NetworkListFragment : Fragment(), NetworkDiscovery.Listener {
                         App.provide(ctx).commManager.connect(socket)
                     else
                         App.provide(ctx).commManager.connect(ip, 5277)
-                    ContextCompat.startForegroundService(ctx, Intent(ctx, AapService::class.java).apply {
+                    AapService.startInteractive(ctx, Intent(ctx, AapService::class.java).apply {
                         action = AapService.ACTION_CONNECT_SOCKET
                     })
                 }
@@ -317,7 +317,7 @@ class NetworkListFragment : Fragment(), NetworkDiscovery.Listener {
         override fun onClick(v: View) {
             if (v.id == android.R.id.button2) {
                 val ip = v.getTag(R.integer.key_data) as String
-                ContextCompat.startForegroundService(context, Intent(context, AapService::class.java).apply {
+                AapService.startInteractive(context, Intent(context, AapService::class.java).apply {
                     action = AapService.ACTION_CONNECT_SOCKET
                 })
                 scope.launch(Dispatchers.IO) { App.provide(context).commManager.connect(ip, 5277) }

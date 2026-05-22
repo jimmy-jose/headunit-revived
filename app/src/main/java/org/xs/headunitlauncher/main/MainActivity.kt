@@ -143,7 +143,7 @@ class MainActivity : BaseActivity() {
 
         // Start main service immediately to handle connections and wireless server
         val serviceIntent = Intent(this, AapService::class.java)
-        ContextCompat.startForegroundService(this, serviceIntent)
+        AapService.startInteractive(this, serviceIntent)
 
         setFullscreen()
 
@@ -278,7 +278,7 @@ class MainActivity : BaseActivity() {
             val exitIntent = Intent(this, AapService::class.java).apply {
                 this.action = AapService.ACTION_STOP_SERVICE
             }
-            ContextCompat.startForegroundService(this, exitIntent)
+            AapService.startInteractive(this, exitIntent)
             finishAffinity()
             return
         }
@@ -290,7 +290,7 @@ class MainActivity : BaseActivity() {
             val selfModeIntent = Intent(this, AapService::class.java).apply {
                 this.action = AapService.ACTION_START_SELF_MODE
             }
-            ContextCompat.startForegroundService(this, selfModeIntent)
+            AapService.startInteractive(this, selfModeIntent)
         }
 
         if (intent.action == Intent.ACTION_VIEW) {
@@ -298,7 +298,7 @@ class MainActivity : BaseActivity() {
                 val ip = intentData.getQueryParameter("ip")
                 if (!ip.isNullOrEmpty()) {
                     AppLog.i("Received connect intent for IP: $ip")
-                    ContextCompat.startForegroundService(this, Intent(this, AapService::class.java).apply {
+                    AapService.startInteractive(this, Intent(this, AapService::class.java).apply {
                         action = AapService.ACTION_CONNECT_SOCKET
                     })
                     lifecycleScope.launch(Dispatchers.IO) { App.provide(this@MainActivity).commManager.connect(ip, 5277) }
@@ -307,20 +307,20 @@ class MainActivity : BaseActivity() {
                     val autoIntent = Intent(this, AapService::class.java).apply {
                         action = AapService.ACTION_CHECK_USB
                     }
-                    ContextCompat.startForegroundService(this, autoIntent)
+                    AapService.startInteractive(this, autoIntent)
                 }
             } else if (intentData?.scheme == "headunit" && intentData.host == "disconnect") {
                 AppLog.i("Received disconnect intent")
                 val stopIntent = Intent(this, AapService::class.java).apply {
                     action = AapService.ACTION_DISCONNECT
                 }
-                ContextCompat.startForegroundService(this, stopIntent)
+                AapService.startInteractive(this, stopIntent)
             } else if (intentData?.scheme == "headunit" && intentData.host == "exit") {
                 AppLog.i("Received full exit intent via deep link")
                 val exitIntent = Intent(this, AapService::class.java).apply {
                     action = AapService.ACTION_STOP_SERVICE
                 }
-                ContextCompat.startForegroundService(this, exitIntent)
+                AapService.startInteractive(this, exitIntent)
                 finishAffinity()
             }
         }

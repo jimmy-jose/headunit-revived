@@ -142,7 +142,7 @@ class VideoDecoder(private val settings: Settings) {
             
             AppLog.i("New surface set: $surface")
             if (codec != null) {
-                stop("New surface")
+                stop(if (surface == null) "Surface cleared" else "New surface")
             }
             mSurface = surface
             lastFrameRenderedMs = 0L
@@ -154,6 +154,10 @@ class VideoDecoder(private val settings: Settings) {
      */
     fun stop(reason: String = "unknown") {
         synchronized(this) {
+            if (!running && codec == null && outputThread == null) {
+                AppLog.i("Decoder stop skipped: already stopped ($reason)")
+                return
+            }
             running = false
             try {
                 // If calling from output thread, don't join itself to avoid deadlock

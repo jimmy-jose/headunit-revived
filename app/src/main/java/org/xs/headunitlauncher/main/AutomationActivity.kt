@@ -44,7 +44,7 @@ class AutomationActivity : AppCompatActivity() {
             "connect" -> {
                 val ip = data.getQueryParameter("ip")
                 if (!ip.isNullOrEmpty()) {
-                    ContextCompat.startForegroundService(this, Intent(this, AapService::class.java).apply {
+                    AapService.startInteractive(this, Intent(this, AapService::class.java).apply {
                         action = AapService.ACTION_CONNECT_SOCKET
                     })
                     lifecycleScope.launch(Dispatchers.IO) { App.provide(this@AutomationActivity).commManager.connect(ip, 5277) }
@@ -52,20 +52,20 @@ class AutomationActivity : AppCompatActivity() {
                     val autoIntent = Intent(this, AapService::class.java).apply {
                         this.action = AapService.ACTION_CHECK_USB
                     }
-                    ContextCompat.startForegroundService(this, autoIntent)
+                    AapService.startInteractive(this, autoIntent)
                 }
             }
             "disconnect" -> {
                 val stopIntent = Intent(this, AapService::class.java).apply {
                     this.action = AapService.ACTION_DISCONNECT
                 }
-                ContextCompat.startForegroundService(this, stopIntent)
+                AapService.startInteractive(this, stopIntent)
             }
             "exit" -> {
                 val exitIntent = Intent(this, AapService::class.java).apply {
                     this.action = AapService.ACTION_STOP_SERVICE
                 }
-                ContextCompat.startForegroundService(this, exitIntent)
+                AapService.startInteractive(this, exitIntent)
                 // Broadcast a finish request to close MainActivity if it's open
                 sendBroadcast(Intent("org.xs.headunitlauncher.ACTION_FINISH_ACTIVITIES"))
             }
@@ -83,26 +83,26 @@ class AutomationActivity : AppCompatActivity() {
                 val autoIntent = Intent(this, AapService::class.java).apply {
                     this.action = AapService.ACTION_CHECK_USB
                 }
-                ContextCompat.startForegroundService(this, autoIntent)
+                AapService.startInteractive(this, autoIntent)
             }
             "org.xs.headunitlauncher.ACTION_DISCONNECT" -> {
                 val stopIntent = Intent(this, AapService::class.java).apply {
                     this.action = AapService.ACTION_DISCONNECT
                 }
-                ContextCompat.startForegroundService(this, stopIntent)
+                AapService.startInteractive(this, stopIntent)
             }
             "org.xs.headunitlauncher.ACTION_START_SELF_MODE" -> {
                 val selfIntent = Intent(this, AapService::class.java).apply {
                     this.action = AapService.ACTION_START_SELF_MODE
                 }
-                ContextCompat.startForegroundService(this, selfIntent)
+                AapService.startInteractive(this, selfIntent)
             }
             "org.xs.headunitlauncher.ACTION_STOP_SERVICE",
             "org.xs.headunitlauncher.ACTION_EXIT" -> {
                 val exitIntent = Intent(this, AapService::class.java).apply {
                     this.action = AapService.ACTION_STOP_SERVICE
                 }
-                ContextCompat.startForegroundService(this, exitIntent)
+                AapService.startInteractive(this, exitIntent)
                 sendBroadcast(Intent("org.xs.headunitlauncher.ACTION_FINISH_ACTIVITIES").apply {
                     setPackage(packageName)
                 })
@@ -120,6 +120,6 @@ class AutomationActivity : AppCompatActivity() {
         val updateIntent = Intent(this, AapService::class.java).apply {
             this.action = AapService.ACTION_REQUEST_NIGHT_MODE_UPDATE
         }
-        ContextCompat.startForegroundService(this, updateIntent)
+        AapService.startInteractive(this, updateIntent)
     }
 }

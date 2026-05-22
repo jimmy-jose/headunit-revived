@@ -206,7 +206,7 @@ class AutoStartFragment : Fragment() {
         // Start the foreground service immediately when wake-detection settings
         // are enabled so it can register the dynamic SCREEN_ON receiver.
         if (settings.autoStartOnScreenOn || settings.autoStartOnBoot) {
-            ContextCompat.startForegroundService(requireContext(),
+            AapService.startInteractive(requireContext(),
                 Intent(requireContext(), AapService::class.java))
         }
 

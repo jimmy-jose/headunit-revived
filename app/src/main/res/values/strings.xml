@@ -135,11 +135,13 @@
     <string name="export_logs">Export Logs</string>
     <string name="export_logs_description">Save logs for debugging</string>
     <string name="crash_report_ready_title">Crash report ready</string>
-    <string name="crash_report_ready_message">The app recovered from a crash on %1$s.\nTap here to share the saved report.\n%2$s</string>
+    <string name="crash_report_ready_message">The app recovered from a crash on %1$s.\nUse Share to send the saved report.\n%2$s</string>
     <string name="share_crash_report">Share crash report</string>
+    <string name="clear_crash_report">Clear report</string>
     <string name="ignore_report">Ignore</string>
     <string name="crash_report_missing">The saved crash report is no longer available.</string>
     <string name="crash_report_ignored">Crash report ignored</string>
+    <string name="crash_report_cleared">Crash report cleared</string>
     <string name="billing_gate_title">Unlock HeadUnitLauncher</string>
     <string name="billing_status_checking">Checking your unlock and trial status…</string>
     <string name="billing_trial_active_message">Your 7-day local trial is active.\nTime remaining: %1$s</string>

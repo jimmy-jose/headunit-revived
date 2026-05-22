@@ -1,6 +1,9 @@
 package org.xs.headunitlauncher.utils
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
+import android.os.Bundle
 import android.os.Build
 import org.xs.headunitlauncher.BuildConfig
 import org.xs.headunitlauncher.R
@@ -25,15 +28,22 @@ object CrashReportStore {
     private const val KEY_PENDING_CRASH_PATH = "pending-crash-path"
     private const val KEY_PENDING_CRASH_TIME = "pending-crash-time"
     private const val KEY_PENDING_CRASH_SUMMARY = "pending-crash-summary"
+    private const val KEY_FOREGROUND_SESSION_ACTIVE = "crash-foreground-session-active"
+    private const val KEY_FOREGROUND_SESSION_SINCE = "crash-foreground-session-since"
     private const val MAX_CRASH_REPORTS = 5
 
     @Volatile
     private var isInstalled = false
+    private var startedActivityCount = 0
 
     fun install(context: Context) {
         if (isInstalled) return
 
         val appContext = context.applicationContext
+        maybeCreateUnexpectedShutdownReport(appContext)
+        if (appContext is Application) {
+            registerActivityCallbacks(appContext)
+        }
         val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
@@ -161,6 +171,13 @@ object CrashReportStore {
                 appendLine("Recent logcat:")
                 appendLine(logcat.trimEnd())
             }
+
+            val appLogs = AppLog.readRecentLogs()
+            if (appLogs.isNotBlank()) {
+                appendLine()
+                appendLine("Recent HUL app logs:")
+                appendLine(appLogs.trimEnd())
+            }
         }
     }
 
@@ -191,5 +208,119 @@ object CrashReportStore {
         }
 
         return ""
+    }
+
+    private fun maybeCreateUnexpectedShutdownReport(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val wasForegroundSessionActive = prefs.getBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
+        if (!wasForegroundSessionActive || getPendingReport(context) != null) {
+            return
+        }
+
+        val sessionStartedAt = prefs.getLong(KEY_FOREGROUND_SESSION_SINCE, 0L)
+        persistUnexpectedShutdown(context, sessionStartedAt)
+        prefs.edit()
+            .putBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
+            .remove(KEY_FOREGROUND_SESSION_SINCE)
+            .commit()
+    }
+
+    private fun registerActivityCallbacks(application: Application) {
+        application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+
+            override fun onActivityStarted(activity: Activity) {
+                startedActivityCount += 1
+                if (startedActivityCount == 1) {
+                    val now = System.currentTimeMillis()
+                    application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putBoolean(KEY_FOREGROUND_SESSION_ACTIVE, true)
+                        .putLong(KEY_FOREGROUND_SESSION_SINCE, now)
+                        .commit()
+                }
+            }
+
+            override fun onActivityResumed(activity: Activity) = Unit
+
+            override fun onActivityPaused(activity: Activity) = Unit
+
+            override fun onActivityStopped(activity: Activity) {
+                startedActivityCount = (startedActivityCount - 1).coerceAtLeast(0)
+                if (startedActivityCount == 0) {
+                    application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                        .edit()
+                        .putBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
+                        .remove(KEY_FOREGROUND_SESSION_SINCE)
+                        .commit()
+                }
+            }
+
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        })
+    }
+
+    private fun persistUnexpectedShutdown(context: Context, sessionStartedAt: Long) {
+        val reportDir = context.getExternalFilesDir(null) ?: context.filesDir
+        if (!reportDir.exists()) {
+            reportDir.mkdirs()
+        }
+        rotateReports(reportDir)
+
+        val timestamp = System.currentTimeMillis()
+        val fileStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date(timestamp))
+        val reportFile = File(reportDir, "HUL_Crash_$fileStamp.txt")
+        reportFile.writeText(buildUnexpectedShutdownReport(context, timestamp, sessionStartedAt))
+
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_PENDING_CRASH_PATH, reportFile.absolutePath)
+            .putLong(KEY_PENDING_CRASH_TIME, timestamp)
+            .putString(
+                KEY_PENDING_CRASH_SUMMARY,
+                "Unexpected shutdown${if (sessionStartedAt > 0L) " after active session" else ""}"
+            )
+            .commit()
+    }
+
+    private fun buildUnexpectedShutdownReport(
+        context: Context,
+        timestamp: Long,
+        sessionStartedAt: Long
+    ): String {
+        return buildString {
+            appendLine("HeadUnitLauncher crash report")
+            appendLine("Generated: ${formatTimestamp(timestamp)}")
+            appendLine("App version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+            appendLine("Package: ${context.packageName}")
+            appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
+            appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
+            appendLine("ABIs: ${Build.SUPPORTED_ABIS.joinToString()}")
+            appendLine()
+            appendLine("Exception summary:")
+            appendLine("The previous foreground session ended unexpectedly before Android reported a clean stop.")
+            if (sessionStartedAt > 0L) {
+                appendLine("Last foreground session started: ${formatTimestamp(sessionStartedAt)}")
+            }
+            appendLine()
+            appendLine("Notes:")
+            appendLine("This usually means a native crash, watchdog kill, system restart, or another abrupt process death that bypassed the Java uncaught exception handler.")
+
+            val logcat = readRecentLogcat()
+            if (logcat.isNotBlank()) {
+                appendLine()
+                appendLine("Recent logcat:")
+                appendLine(logcat.trimEnd())
+            }
+
+            val appLogs = AppLog.readRecentLogs()
+            if (appLogs.isNotBlank()) {
+                appendLine()
+                appendLine("Recent HUL app logs:")
+                appendLine(appLogs.trimEnd())
+            }
+        }
     }
 }

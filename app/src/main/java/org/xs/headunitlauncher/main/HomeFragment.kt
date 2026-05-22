@@ -88,7 +88,8 @@ class HomeFragment : Fragment() {
     private lateinit var wifi_text_view: TextView
     private var crashReportContainer: View? = null
     private var crashReportText: TextView? = null
-    private var crashReportIgnoreButton: Button? = null
+    private var crashReportShareButton: Button? = null
+    private var crashReportClearButton: Button? = null
     private var trialBannerContainer: View? = null
     private var trialBannerText: TextView? = null
     private var nativeWirelessWarningContainer: View? = null
@@ -141,7 +142,8 @@ class HomeFragment : Fragment() {
         wifi_text_view = view.findViewById(R.id.wifi_text)
         crashReportContainer = view.findViewById(R.id.crash_report_container)
         crashReportText = view.findViewById(R.id.crash_report_text)
-        crashReportIgnoreButton = view.findViewById(R.id.crash_report_ignore_button)
+        crashReportShareButton = view.findViewById(R.id.crash_report_share_button)
+        crashReportClearButton = view.findViewById(R.id.crash_report_clear_button)
         trialBannerContainer = view.findViewById(R.id.trial_banner_container)
         trialBannerText = view.findViewById(R.id.trial_banner_text)
         nativeWirelessWarningContainer = view.findViewById(R.id.native_wireless_warning_container)
@@ -230,7 +232,7 @@ class HomeFragment : Fragment() {
         val appSettings = App.provide(requireContext()).settings
 
         if (appSettings.autoStartOnScreenOn || appSettings.autoStartOnBoot) {
-            ContextCompat.startForegroundService(requireContext(),
+            AapService.startInteractive(requireContext(),
                 Intent(requireContext(), AapService::class.java))
         }
 
@@ -274,7 +276,7 @@ class HomeFragment : Fragment() {
         AapService.selfMode = true
         val intent = Intent(requireContext(), AapService::class.java)
         intent.action = AapService.ACTION_START_SELF_MODE
-        ContextCompat.startForegroundService(requireContext(), intent)
+        AapService.startInteractive(requireContext(), intent)
         AppLog.i("Auto start selfmode")
     }
 
@@ -330,7 +332,7 @@ class HomeFragment : Fragment() {
                     Toast.makeText(requireContext(), getString(R.string.auto_connecting_to, ip), Toast.LENGTH_SHORT).show()
                     val ctx = requireContext()
                     lifecycleScope.launch(Dispatchers.IO) { App.provide(ctx).commManager.connect(ip, 5277) }
-                    ContextCompat.startForegroundService(requireContext(), Intent(requireContext(), AapService::class.java).apply {
+                    AapService.startInteractive(requireContext(), Intent(requireContext(), AapService::class.java).apply {
                         action = AapService.ACTION_CONNECT_SOCKET
                     })
                 }
@@ -345,7 +347,7 @@ class HomeFragment : Fragment() {
                     if (matchingDevice != null && usbManager.hasPermission(matchingDevice)) {
                         AppLog.i("Auto-connect: Attempting USB connection to $lastUsbDevice")
                         Toast.makeText(requireContext(), getString(R.string.auto_connecting_usb), Toast.LENGTH_SHORT).show()
-                        ContextCompat.startForegroundService(requireContext(), Intent(requireContext(), AapService::class.java).apply {
+                        AapService.startInteractive(requireContext(), Intent(requireContext(), AapService::class.java).apply {
                             action = AapService.ACTION_CHECK_USB
                         })
                     } else {
@@ -367,7 +369,7 @@ class HomeFragment : Fragment() {
             commManager.isConnected) return
 
         AppLog.i("HomeFragment: Requesting single-USB auto-connect via AapService")
-        ContextCompat.startForegroundService(requireContext(),
+        AapService.startInteractive(requireContext(),
             Intent(requireContext(), AapService::class.java).apply {
                 action = AapService.ACTION_CHECK_USB
             })
@@ -432,12 +434,12 @@ class HomeFragment : Fragment() {
                 val disconnectIntent = Intent(requireContext(), AapService::class.java).apply {
                     action = AapService.ACTION_DISCONNECT
                 }
-                ContextCompat.startForegroundService(requireContext(), disconnectIntent)
+                AapService.startInteractive(requireContext(), disconnectIntent)
             } else {
                 val stopServiceIntent = Intent(requireContext(), AapService::class.java).apply {
                     action = AapService.ACTION_STOP_SERVICE
                 }
-                ContextCompat.startForegroundService(requireContext(), stopServiceIntent)
+                AapService.startInteractive(requireContext(), stopServiceIntent)
             }
             requireActivity().finishAffinity()
         }
@@ -468,7 +470,7 @@ class HomeFragment : Fragment() {
             showConnectionInfoDialog()
         }
 
-        crashReportContainer?.setOnClickListener {
+        crashReportShareButton?.setOnClickListener {
             val shared = CrashReportStore.sharePendingReport(requireContext())
             if (!shared) {
                 Toast.makeText(requireContext(), R.string.crash_report_missing, Toast.LENGTH_SHORT).show()
@@ -476,10 +478,10 @@ class HomeFragment : Fragment() {
             }
         }
 
-        crashReportIgnoreButton?.setOnClickListener {
+        crashReportClearButton?.setOnClickListener {
             CrashReportStore.ignorePendingReport(requireContext())
             updateCrashReportBanner()
-            Toast.makeText(requireContext(), R.string.crash_report_ignored, Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.crash_report_cleared, Toast.LENGTH_SHORT).show()
         }
 
         appDrawerHandle.setOnClickListener {
@@ -504,7 +506,7 @@ class HomeFragment : Fragment() {
                             val intent = Intent(requireContext(), AapService::class.java).apply {
                                 action = AapService.ACTION_START_WIRELESS_SCAN
                             }
-                            ContextCompat.startForegroundService(requireContext(), intent)
+                            AapService.startInteractive(requireContext(), intent)
                         }
                     }
                 }
@@ -647,7 +649,7 @@ class HomeFragment : Fragment() {
         val intent = Intent(requireContext(), AapService::class.java).apply {
             action = AapService.ACTION_START_WIRELESS
         }
-        requireContext().startService(intent)
+        AapService.startInteractive(requireContext(), intent)
 
         updateNativeWirelessWarning()
         Toast.makeText(requireContext(), R.string.switched_to_wireless_helper, Toast.LENGTH_SHORT).show()
@@ -691,7 +693,7 @@ class HomeFragment : Fragment() {
                     action = AapService.ACTION_NATIVE_AA_POKE
                     putExtra(AapService.EXTRA_MAC, device.address)
                 }
-                ContextCompat.startForegroundService(requireContext(), intent)
+                AapService.startInteractive(requireContext(), intent)
                 Toast.makeText(requireContext(), "Searching for ${device.name}...", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(R.string.cancel, null)
@@ -700,7 +702,7 @@ class HomeFragment : Fragment() {
 
     private fun showNearbyDeviceSelector() {
         // Ensure NearbyManager discovery is running via AapService
-        ContextCompat.startForegroundService(requireContext(),
+        AapService.startInteractive(requireContext(),
             Intent(requireContext(), AapService::class.java).apply {
                 action = AapService.ACTION_START_WIRELESS_SCAN
             })
@@ -777,7 +779,7 @@ class HomeFragment : Fragment() {
                     action = AapService.ACTION_NEARBY_CONNECT
                     putExtra(AapService.EXTRA_ENDPOINT_ID, endpoint.id)
                 }
-                ContextCompat.startForegroundService(requireContext(), intent)
+                AapService.startInteractive(requireContext(), intent)
             }
         }
 

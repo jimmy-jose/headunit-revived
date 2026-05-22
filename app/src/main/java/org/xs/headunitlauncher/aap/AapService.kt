@@ -626,6 +626,7 @@ class AapService : Service(), UsbReceiver.Listener {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         AppLog.i("AapService creating...")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -1480,6 +1481,7 @@ class AapService : Service(), UsbReceiver.Listener {
     override fun onDestroy() {
         AppLog.i("AapService destroying... (wakeLock held=${bootWakeLock?.isHeld == true})")
         isDestroying = true
+        isRunning = false
         mediaMetadataDecodeJob?.cancel()
         cachedAaAlbumArtBitmap = null
         mediaNotification.cancel()
@@ -2505,6 +2507,39 @@ class AapService : Service(), UsbReceiver.Listener {
         val scanningState = MutableStateFlow(false)
 
         private const val BOOT_START_NOTIFICATION_ID = 42
+        @Volatile
+        private var isRunning = false
+        @Volatile
+        private var lastInteractiveStartAt = 0L
+        private const val INTERACTIVE_START_DEBOUNCE_MS = 2_500L
+
+        fun startInteractive(context: Context, intent: Intent) {
+            val action = intent.action
+            val isDefaultStart = action == null || action == Intent.ACTION_MAIN
+            val now = SystemClock.elapsedRealtime()
+
+            if (isDefaultStart) {
+                val recent = now - lastInteractiveStartAt < INTERACTIVE_START_DEBOUNCE_MS
+                if (isRunning || recent) {
+                    AppLog.i(
+                        "AapService: skipping redundant interactive start " +
+                            "(running=$isRunning, recent=${now - lastInteractiveStartAt}ms, action=${action ?: "<default>"})"
+                    )
+                    return
+                }
+                lastInteractiveStartAt = now
+            }
+
+            try {
+                context.startService(intent)
+            } catch (e: IllegalStateException) {
+                ContextCompat.startForegroundService(context, intent)
+            }
+        }
+
+        fun startForegroundCompat(context: Context, intent: Intent) {
+            ContextCompat.startForegroundService(context, intent)
+        }
 
         // Service action strings used with startService() and sendBroadcast()
         const val ACTION_START_SELF_MODE           = "org.xs.headunitlauncher.ACTION_START_SELF_MODE"

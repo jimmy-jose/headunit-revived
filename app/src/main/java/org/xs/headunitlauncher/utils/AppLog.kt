@@ -1,10 +1,15 @@
 package org.xs.headunitlauncher.utils
 
+import android.content.Context
 import android.content.Intent
 import android.util.Log
-
 import java.util.IllegalFormatException
 import java.util.Locale
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 object AppLog {
 
@@ -25,9 +30,21 @@ object AppLog {
     }
 
     private var settings: Settings? = null
+    private var recentLogFile: File? = null
+    private var recentLogArchiveFile: File? = null
+    private val fileLock = ReentrantLock()
+    private val timestampFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)
+    private const val MAX_RECENT_LOG_BYTES = 512 * 1024L
 
-    fun init(settings: Settings?) {
+    fun init(context: Context?, settings: Settings?) {
         this.settings = settings
+        if (context != null) {
+            recentLogFile = File(context.filesDir, "hul_recent.log")
+            recentLogArchiveFile = File(context.filesDir, "hul_recent_prev.log")
+        } else {
+            recentLogFile = null
+            recentLogArchiveFile = null
+        }
     }
 
     var LOGGER: Logger = Logger.Android()
@@ -86,6 +103,7 @@ object AppLog {
     private fun log(priority: Int, msg: String) {
         if (priority >= LOG_LEVEL) {
             LOGGER.println(priority, TAG, msg)
+            appendToRecentLog(priority, msg)
         }
     }
 
@@ -94,7 +112,9 @@ object AppLog {
             return
         }
         val trace = if (LOGGER is Logger.Android) Log.getStackTraceString(tr) else ""
-        LOGGER.println(Log.ERROR, TAG, message + '\n' + trace)
+        val composed = message + '\n' + trace
+        LOGGER.println(Log.ERROR, TAG, composed)
+        appendToRecentLog(Log.ERROR, composed)
     }
 
 
@@ -128,5 +148,47 @@ object AppLog {
             i(ex.toString())
         }
     }
-}
 
+    fun readRecentLogs(maxChars: Int = 120_000): String {
+        val files = listOfNotNull(recentLogArchiveFile, recentLogFile)
+        val content = buildString {
+            files.forEach { file ->
+                if (file.exists()) {
+                    append(file.readText())
+                }
+            }
+        }
+        return if (content.length <= maxChars) content else content.takeLast(maxChars)
+    }
+
+    private fun appendToRecentLog(priority: Int, msg: String) {
+        val file = recentLogFile ?: return
+        val archive = recentLogArchiveFile
+        val level = when (priority) {
+            Log.VERBOSE -> "V"
+            Log.DEBUG -> "D"
+            Log.INFO -> "I"
+            Log.WARN -> "W"
+            Log.ERROR -> "E"
+            else -> priority.toString()
+        }
+        val line = "${timestampFormatter.format(Date())} $level/$TAG: $msg\n"
+
+        fileLock.withLock {
+            try {
+                if (file.exists() && file.length() > MAX_RECENT_LOG_BYTES) {
+                    if (archive != null) {
+                        if (archive.exists()) archive.delete()
+                        file.renameTo(archive)
+                    } else {
+                        file.delete()
+                    }
+                }
+                file.parentFile?.mkdirs()
+                file.appendText(line)
+            } catch (_: Exception) {
+                // Best effort only; logging should never crash the app.
+            }
+        }
+    }
+}

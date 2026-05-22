@@ -337,7 +337,7 @@ class SettingsFragment : Fragment() {
                 val stopServiceIntent = Intent(requireContext(), AapService::class.java).apply {
                     action = AapService.ACTION_STOP_SERVICE
                 }
-                ContextCompat.startForegroundService(requireContext(), stopServiceIntent)
+                AapService.startInteractive(requireContext(), stopServiceIntent)
             }
         }
         

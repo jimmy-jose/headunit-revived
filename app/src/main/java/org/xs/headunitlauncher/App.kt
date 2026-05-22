@@ -44,7 +44,7 @@ class App : Application() {
 
         if (isUserUnlocked()) {
             val settings = Settings(this) // Create a Settings instance
-            AppLog.init(settings) // Initialize AppLog with settings for conditional logging
+            AppLog.init(this, settings) // Initialize AppLog with settings for conditional logging
 
             // Sync auto-start settings to device-protected storage so that
             // BootCompleteReceiver, UsbAttachedActivity, and AutoStartReceiver
@@ -63,7 +63,7 @@ class App : Application() {
                 appThemeManager?.start()
             }
         } else {
-            AppLog.init(null) // Initialize with default logging if locked
+            AppLog.init(this, null) // Initialize with default logging if locked
             AppLog.w("App started in Direct Boot mode (locked). Settings access deferred.")
         }
 

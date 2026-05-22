@@ -173,7 +173,7 @@ class UsbListFragment : Fragment() {
                     // Device is in Accessory Mode but we are NOT connected.
                     // Start connection immediately.
                     Toast.makeText(mContext, R.string.android_auto_starting, Toast.LENGTH_SHORT).show()
-                    ContextCompat.startForegroundService(mContext, Intent(mContext, AapService::class.java).apply {
+                    AapService.startInteractive(mContext, Intent(mContext, AapService::class.java).apply {
                         action = AapService.ACTION_CHECK_USB
                     })
                 } else {
@@ -189,7 +189,7 @@ class UsbListFragment : Fragment() {
                         notifyDataSetChanged()
                     } else {
                         Toast.makeText(mContext, R.string.requesting_usb_permission, Toast.LENGTH_SHORT).show()
-                        ContextCompat.startForegroundService(mContext, Intent(mContext, AapService::class.java))
+                        AapService.startInteractive(mContext, Intent(mContext, AapService::class.java))
                         usbManager.requestPermission(
                             device.wrappedDevice,
                             UsbReceiver.createPermissionPendingIntent(mContext)

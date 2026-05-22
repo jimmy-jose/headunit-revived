@@ -732,7 +732,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         AppLog.i("SurfaceCallback: onSurfaceDestroyed. Surface: $surface")
         isSurfaceSet = false
         commManager.send(VideoFocusEvent(gain = false, unsolicited = false))
-        videoDecoder.stop("surfaceDestroyed")
+        videoDecoder.setSurface(null)
     }
 
 
