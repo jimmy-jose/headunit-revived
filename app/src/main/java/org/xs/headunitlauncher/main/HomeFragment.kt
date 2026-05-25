@@ -19,11 +19,12 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
-import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.Insets
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
@@ -50,6 +51,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
+import kotlin.math.roundToInt
 import org.xs.headunitlauncher.utils.LauncherUtils
 import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.Settings
@@ -115,6 +117,7 @@ class HomeFragment : Fragment() {
     private lateinit var appDrawerChevron: ImageView
     private lateinit var appDrawerSearchInput: TextInputEditText
     private lateinit var homeRoot: View
+    private lateinit var mainButtonsLayout: ConstraintLayout
     private lateinit var homeAppsAdapter: HomeAppsAdapter
     private lateinit var appDrawerBehavior: BottomSheetBehavior<View>
     private var clockJob: Job? = null
@@ -171,6 +174,7 @@ class HomeFragment : Fragment() {
         appDrawerContent = view.findViewById(R.id.app_drawer_content)
         appDrawerChevron = view.findViewById(R.id.app_drawer_chevron)
         appDrawerSearchInput = view.findViewById(R.id.app_drawer_search_input)
+        mainButtonsLayout = view.findViewById(R.id.main_buttons_layout)
         homeAppsRecyclerView = view.findViewById(R.id.home_apps_recycler)
         homeAppsEmptyView = view.findViewById(R.id.home_apps_empty_text)
 
@@ -213,6 +217,7 @@ class HomeFragment : Fragment() {
         applySystemInsets()
 
         setupListeners()
+        updateSelfModeAvailability()
         updateProjectionButtonText()
         updateLauncherUi()
         updateCrashReportBanner()
@@ -564,6 +569,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun updateProjectionButtonText() {
+        if (!isSelfModeAvailable()) {
+            return
+        }
         if (commManager.isConnected) {
             self_mode_text.text = getString(R.string.to_android_auto)
         } else {
@@ -647,21 +655,26 @@ class HomeFragment : Fragment() {
     }
 
     private fun updateHelperTransferBanner() {
-        val appSettings = App.provide(requireContext()).settings
-        if (appSettings.wifiConnectionMode != 2 || appSettings.helperTransferUrlDismissed) {
-            helperTransferContainer?.visibility = View.GONE
-            return
-        }
+        helperTransferContainer?.visibility = View.GONE
+        helperTransferText?.text = ""
 
-        val url = resolveHelperTransferUrl()
-        helperTransferContainer?.visibility = if (url == null) View.GONE else View.VISIBLE
-        helperTransferText?.text = if (url == null) {
-            ""
-        } else {
-            getString(R.string.helper_transfer_message, url)
-        }
+        // Transfer URL banner intentionally hidden for now.
+        // val appSettings = App.provide(requireContext()).settings
+        // if (appSettings.wifiConnectionMode != 2 || appSettings.helperTransferUrlDismissed) {
+        //     helperTransferContainer?.visibility = View.GONE
+        //     return
+        // }
+        //
+        // val url = resolveHelperTransferUrl()
+        // helperTransferContainer?.visibility = if (url == null) View.GONE else View.VISIBLE
+        // helperTransferText?.text = if (url == null) {
+        //     ""
+        // } else {
+        //     getString(R.string.helper_transfer_message, url)
+        // }
     }
 
+    /*
     private fun resolveHelperTransferUrl(): String? {
         val wifiManager = requireContext().applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
             ?: return null
@@ -686,6 +699,7 @@ class HomeFragment : Fragment() {
             address shr 24 and 0xff
         ).joinToString(".")
     }
+    */
 
     private fun formatTrialRemaining(remainingMs: Long): String {
         val totalMinutes = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(remainingMs).coerceAtLeast(0)
@@ -891,6 +905,80 @@ class HomeFragment : Fragment() {
         }
 
         exitButton.setTextColor(Color.WHITE)
+    }
+
+    private fun updateSelfModeAvailability() {
+        val selfModeAvailable = isSelfModeAvailable()
+        self_mode_button.visibility = if (selfModeAvailable) View.VISIBLE else View.GONE
+        self_mode_text.visibility = if (selfModeAvailable) View.VISIBLE else View.GONE
+
+        val constraintSet = ConstraintSet()
+        constraintSet.clone(mainButtonsLayout)
+        constraintSet.clear(R.id.settings_button, ConstraintSet.START)
+        constraintSet.clear(R.id.settings_button, ConstraintSet.END)
+
+        if (selfModeAvailable) {
+            constraintSet.connect(
+                R.id.settings_button,
+                ConstraintSet.START,
+                R.id.self_mode_button,
+                ConstraintSet.END
+            )
+            constraintSet.connect(
+                R.id.settings_button,
+                ConstraintSet.END,
+                ConstraintSet.PARENT_ID,
+                ConstraintSet.END
+            )
+        } else {
+            constraintSet.connect(
+                R.id.settings_button,
+                ConstraintSet.START,
+                ConstraintSet.PARENT_ID,
+                ConstraintSet.START
+            )
+            constraintSet.connect(
+                R.id.settings_button,
+                ConstraintSet.END,
+                ConstraintSet.PARENT_ID,
+                ConstraintSet.END
+            )
+        }
+
+        constraintSet.applyTo(mainButtonsLayout)
+        mainButtonsLayout.post {
+            updateSettingsButtonSize(selfModeAvailable)
+        }
+    }
+
+    private fun isSelfModeAvailable(): Boolean {
+        return VpnControl.isVpnAvailable() && Build.VERSION.SDK_INT > Build.VERSION_CODES.Q
+    }
+
+    private fun updateSettingsButtonSize(selfModeAvailable: Boolean) {
+        val layoutParams = settings.layoutParams
+        if (selfModeAvailable) {
+            if (layoutParams.height != 0) {
+                layoutParams.height = 0
+                settings.layoutParams = layoutParams
+            }
+            return
+        }
+
+        val selfMargins = self_mode_button.layoutParams as? ViewGroup.MarginLayoutParams
+        val settingsMargins = layoutParams as? ViewGroup.MarginLayoutParams
+        val totalHorizontalMargins =
+            (selfMargins?.leftMargin ?: 0) +
+                (selfMargins?.rightMargin ?: 0) +
+                (settingsMargins?.leftMargin ?: 0) +
+                (settingsMargins?.rightMargin ?: 0)
+        val splitButtonWidth = ((mainButtonsLayout.width - totalHorizontalMargins) / 2f).coerceAtLeast(0f)
+        val desiredHeight = (splitButtonWidth * 0.4f).roundToInt().coerceAtLeast(1)
+
+        if (layoutParams.height != desiredHeight) {
+            layoutParams.height = desiredHeight
+            settings.layoutParams = layoutParams
+        }
     }
 
     private fun updateLauncherUi() {

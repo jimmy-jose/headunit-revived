@@ -6,6 +6,7 @@ import android.app.Application
 import android.content.ComponentCallbacks2
 import android.content.ContentValues
 import android.content.Context
+import android.content.pm.PackageInfo
 import android.net.wifi.WifiManager
 import android.os.Bundle
 import android.os.Build
@@ -31,6 +32,11 @@ import kotlin.system.exitProcess
 
 object CrashReportStore {
 
+    private data class LaunchMetadata(
+        val versionCode: Long,
+        val lastUpdateTime: Long
+    )
+
     data class PendingCrashReport(
         val file: File,
         val capturedAtMillis: Long,
@@ -41,10 +47,13 @@ object CrashReportStore {
     private const val KEY_PENDING_CRASH_PATH = "pending-crash-path"
     private const val KEY_PENDING_CRASH_TIME = "pending-crash-time"
     private const val KEY_PENDING_CRASH_SUMMARY = "pending-crash-summary"
+    private const val KEY_PENDING_CRASH_UPDATE_TIME = "pending-crash-update-time"
     private const val KEY_HELPER_UPLOAD_PATH = "crash-helper-upload-path"
     private const val KEY_HELPER_UPLOAD_TIME = "crash-helper-upload-time"
     private const val KEY_FOREGROUND_SESSION_ACTIVE = "crash-foreground-session-active"
     private const val KEY_FOREGROUND_SESSION_SINCE = "crash-foreground-session-since"
+    private const val KEY_LAST_LAUNCH_UPDATE_TIME = "crash-last-launch-update-time"
+    private const val KEY_LAST_LAUNCH_VERSION_CODE = "crash-last-launch-version-code"
     private const val PUBLIC_CRASH_DIR = "HUL"
     private const val AGGREGATE_REPORT_FILE = "HUL_Crash_History.txt"
     private const val MAX_BREADCRUMBS = 250
@@ -60,7 +69,9 @@ object CrashReportStore {
         if (isInstalled) return
 
         val appContext = context.applicationContext
-        maybeCreateUnexpectedShutdownReport(appContext)
+        val launchMetadata = readLaunchMetadata(appContext)
+        maybeCreateUnexpectedShutdownReport(appContext, launchMetadata)
+        persistLaunchMetadata(appContext, launchMetadata)
         mirrorPendingReportToHelperAsync(appContext)
         if (appContext is Application) {
             registerActivityCallbacks(appContext)
@@ -91,6 +102,11 @@ object CrashReportStore {
     fun getPendingReport(context: Context): PendingCrashReport? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val path = prefs.getString(KEY_PENDING_CRASH_PATH, null) ?: return null
+        val storedUpdateTime = prefs.getLong(KEY_PENDING_CRASH_UPDATE_TIME, -1L)
+        if (storedUpdateTime == -1L || storedUpdateTime != readLaunchMetadata(context.applicationContext).lastUpdateTime) {
+            clearPendingReport(context)
+            return null
+        }
         val file = File(path)
         if (!file.exists()) {
             clearPendingReport(context)
@@ -138,6 +154,7 @@ object CrashReportStore {
             .remove(KEY_PENDING_CRASH_PATH)
             .remove(KEY_PENDING_CRASH_TIME)
             .remove(KEY_PENDING_CRASH_SUMMARY)
+            .remove(KEY_PENDING_CRASH_UPDATE_TIME)
             .remove(KEY_HELPER_UPLOAD_PATH)
             .remove(KEY_HELPER_UPLOAD_TIME)
             .commit()
@@ -160,6 +177,7 @@ object CrashReportStore {
             .putString(KEY_PENDING_CRASH_PATH, reportFile.absolutePath)
             .putLong(KEY_PENDING_CRASH_TIME, timestamp)
             .putString(KEY_PENDING_CRASH_SUMMARY, summarizeThrowable(throwable))
+            .putLong(KEY_PENDING_CRASH_UPDATE_TIME, readLaunchMetadata(context).lastUpdateTime)
             .commit()
         mirrorPendingReportToHelperAsync(context)
     }
@@ -263,10 +281,32 @@ object CrashReportStore {
         return ""
     }
 
-    private fun maybeCreateUnexpectedShutdownReport(context: Context) {
+    private fun maybeCreateUnexpectedShutdownReport(context: Context, launchMetadata: LaunchMetadata) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val wasForegroundSessionActive = prefs.getBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
         if (!wasForegroundSessionActive || getPendingReport(context) != null) {
+            return
+        }
+
+        val previousUpdateTime = prefs.getLong(KEY_LAST_LAUNCH_UPDATE_TIME, -1L)
+        val previousVersionCode = prefs.getLong(KEY_LAST_LAUNCH_VERSION_CODE, -1L)
+        val isFirstInstall = previousUpdateTime == -1L || previousVersionCode == -1L
+        if (isFirstInstall) {
+            // First-install crash warning intentionally suppressed for now.
+            prefs.edit()
+                .putBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
+                .remove(KEY_FOREGROUND_SESSION_SINCE)
+                .commit()
+            return
+        }
+        val isSameInstalledBuild =
+            previousUpdateTime == launchMetadata.lastUpdateTime &&
+                previousVersionCode == launchMetadata.versionCode
+        if (!isSameInstalledBuild) {
+            prefs.edit()
+                .putBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
+                .remove(KEY_FOREGROUND_SESSION_SINCE)
+                .commit()
             return
         }
 
@@ -363,8 +403,43 @@ object CrashReportStore {
                 KEY_PENDING_CRASH_SUMMARY,
                 "Unexpected shutdown${if (sessionStartedAt > 0L) " after active session" else ""}"
             )
+            .putLong(KEY_PENDING_CRASH_UPDATE_TIME, readLaunchMetadata(context).lastUpdateTime)
             .commit()
         mirrorPendingReportToHelperAsync(context)
+    }
+
+    private fun persistLaunchMetadata(context: Context, metadata: LaunchMetadata) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putLong(KEY_LAST_LAUNCH_VERSION_CODE, metadata.versionCode)
+            .putLong(KEY_LAST_LAUNCH_UPDATE_TIME, metadata.lastUpdateTime)
+            .commit()
+    }
+
+    private fun readLaunchMetadata(context: Context): LaunchMetadata {
+        val packageInfo = context.packageManager.getPackageInfoCompat(context.packageName)
+        return LaunchMetadata(
+            versionCode = packageInfo.longVersionCodeCompat(),
+            lastUpdateTime = packageInfo.lastUpdateTime
+        )
+    }
+
+    private fun android.content.pm.PackageManager.getPackageInfoCompat(packageName: String): PackageInfo {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getPackageInfo(packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            getPackageInfo(packageName, 0)
+        }
+    }
+
+    private fun PackageInfo.longVersionCodeCompat(): Long {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            longVersionCode
+        } else {
+            @Suppress("DEPRECATION")
+            versionCode.toLong()
+        }
     }
 
     private fun mirrorPendingReportToHelperAsync(context: Context) {

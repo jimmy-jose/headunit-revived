@@ -134,8 +134,8 @@
     <string name="stop_log_capture_description">Recording in progress… tap to stop</string>
     <string name="export_logs">Export Logs</string>
     <string name="export_logs_description">Save logs for debugging</string>
-    <string name="crash_report_ready_title">Crash report ready</string>
-    <string name="crash_report_ready_message">The app recovered from a crash on %1$s.\nUse Share to send the saved report. A copy is also saved to /Download/HUL.\n%2$s</string>
+    <string name="crash_report_ready_title">Crash Report</string>
+    <string name="crash_report_ready_message">Recovered from a crash on %1$s. Share the saved report if you want help diagnosing it.\n%2$s</string>
     <string name="share_crash_report">Share crash report</string>
     <string name="clear_crash_report">Clear report</string>
     <string name="ignore_report">Ignore</string>

@@ -2,6 +2,7 @@ package org.xs.hulhelper.utils
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
@@ -27,6 +28,7 @@ object CrashReportStore {
     private const val KEY_PENDING_CRASH_PATH = "pending_crash_path"
     private const val KEY_PENDING_CRASH_TIME = "pending_crash_time"
     private const val KEY_PENDING_CRASH_SUMMARY = "pending_crash_summary"
+    private const val KEY_PENDING_CRASH_UPDATE_TIME = "pending_crash_update_time"
     private const val MAX_CRASH_REPORTS = 5
 
     @Volatile
@@ -59,6 +61,11 @@ object CrashReportStore {
     fun getPendingReport(context: Context): PendingCrashReport? {
         val prefs = Prefs.get(context)
         val path = prefs.getString(KEY_PENDING_CRASH_PATH, null) ?: return null
+        val storedUpdateTime = prefs.getLong(KEY_PENDING_CRASH_UPDATE_TIME, -1L)
+        if (storedUpdateTime == -1L || storedUpdateTime != readLastUpdateTime(context.applicationContext)) {
+            clearPendingReport(context)
+            return null
+        }
         val file = File(path)
         if (!file.exists()) {
             clearPendingReport(context)
@@ -99,6 +106,7 @@ object CrashReportStore {
             .remove(KEY_PENDING_CRASH_PATH)
             .remove(KEY_PENDING_CRASH_TIME)
             .remove(KEY_PENDING_CRASH_SUMMARY)
+            .remove(KEY_PENDING_CRASH_UPDATE_TIME)
             .commit()
     }
 
@@ -118,7 +126,22 @@ object CrashReportStore {
             .putString(KEY_PENDING_CRASH_PATH, reportFile.absolutePath)
             .putLong(KEY_PENDING_CRASH_TIME, timestamp)
             .putString(KEY_PENDING_CRASH_SUMMARY, summarizeThrowable(throwable))
+            .putLong(KEY_PENDING_CRASH_UPDATE_TIME, readLastUpdateTime(context))
             .commit()
+    }
+
+    private fun readLastUpdateTime(context: Context): Long {
+        val packageInfo = context.packageManager.getPackageInfoCompat(context.packageName)
+        return packageInfo.lastUpdateTime
+    }
+
+    private fun android.content.pm.PackageManager.getPackageInfoCompat(packageName: String): PackageInfo {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getPackageInfo(packageName, android.content.pm.PackageManager.PackageInfoFlags.of(0))
+        } else {
+            @Suppress("DEPRECATION")
+            getPackageInfo(packageName, 0)
+        }
     }
 
     private fun rotateReports(reportDir: File) {

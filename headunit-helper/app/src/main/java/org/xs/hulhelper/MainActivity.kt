@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cardCrashReport: View
     private lateinit var tvCrashReportMessage: TextView
     private lateinit var btnIgnoreCrashReport: Button
+    private lateinit var btnShareCrashReport: Button
     private lateinit var cardTransferCenter: View
     private lateinit var tvTransferStatus: TextView
     private lateinit var tvTransferUrl: TextView
@@ -199,6 +200,7 @@ class MainActivity : AppCompatActivity() {
         cardCrashReport = findViewById(R.id.cardCrashReport)
         tvCrashReportMessage = findViewById(R.id.tvCrashReportMessage)
         btnIgnoreCrashReport = findViewById(R.id.btnIgnoreCrashReport)
+        btnShareCrashReport = findViewById(R.id.btnShareCrashReport)
         cardTransferCenter = findViewById(R.id.cardTransferCenter)
         tvTransferStatus = findViewById(R.id.tvTransferStatus)
         tvTransferUrl = findViewById(R.id.tvTransferUrl)
@@ -246,7 +248,7 @@ class MainActivity : AppCompatActivity() {
         
         layoutExportLog.setOnClickListener { exportLogs() }
 
-        cardCrashReport.setOnClickListener {
+        btnShareCrashReport.setOnClickListener {
             val shared = CrashReportStore.sharePendingReport(this)
             if (!shared) {
                 Toast.makeText(this, R.string.crash_report_missing, Toast.LENGTH_SHORT).show()
@@ -264,16 +266,19 @@ class MainActivity : AppCompatActivity() {
             transferFilePickerLauncher.launch(arrayOf("*/*"))
         }
 
-        btnTransferCopyUrl.setOnClickListener {
-            val url = TransferHttpServer.getLocalUrl(this)
-            if (url.isNullOrBlank()) {
-                Toast.makeText(this, R.string.transfer_url_unavailable, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("HUL Transfer URL", url))
-            Toast.makeText(this, R.string.transfer_url_copied, Toast.LENGTH_SHORT).show()
-        }
+        btnTransferCopyUrl.visibility = View.GONE
+
+        // Transfer URL copy is intentionally disabled for now.
+        // btnTransferCopyUrl.setOnClickListener {
+        //     val url = TransferHttpServer.getLocalUrl(this)
+        //     if (url.isNullOrBlank()) {
+        //         Toast.makeText(this, R.string.transfer_url_unavailable, Toast.LENGTH_SHORT).show()
+        //         return@setOnClickListener
+        //     }
+        //     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        //     clipboard.setPrimaryClip(android.content.ClipData.newPlainText("HUL Transfer URL", url))
+        //     Toast.makeText(this, R.string.transfer_url_copied, Toast.LENGTH_SHORT).show()
+        // }
 
         btnToggleService.setOnClickListener {
             if (isServiceRunning) {
@@ -588,29 +593,37 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateTransferCenterCard() {
-        val currentMode = getSharedPreferences("WirelessHelperPrefs", Context.MODE_PRIVATE)
-            .getInt("connection_mode", 0)
-        val fileCount = TransferHttpServer.listTransferFiles(this).size
-        val url = if (TransferHttpServer.isRunning()) TransferHttpServer.getLocalUrl(this) else null
-        val isHotspotMode = normalizeConnectionMode(currentMode) == MODE_HOTSPOT_PHONE
+        cardTransferCenter.visibility = View.GONE
 
-        tvTransferUrl.text = url ?: getString(R.string.transfer_url_waiting)
-        tvTransferStatus.text = when {
-            !TransferHttpServer.isRunning() -> getString(R.string.transfer_status_service_off)
-            url == null && isHotspotMode -> getString(R.string.transfer_status_waiting_hotspot)
-            url == null -> getString(R.string.transfer_status_waiting_network)
-            isHotspotMode -> resources.getQuantityString(
-                R.plurals.transfer_status_hotspot_files,
-                fileCount,
-                fileCount
-            )
-            else -> resources.getQuantityString(
-                R.plurals.transfer_status_network_files,
-                fileCount,
-                fileCount
-            )
-        }
-        btnTransferCopyUrl.isEnabled = !url.isNullOrBlank()
+        // Transfer Center intentionally hidden for now.
+        // val currentMode = getSharedPreferences("WirelessHelperPrefs", Context.MODE_PRIVATE)
+        //     .getInt("connection_mode", 0)
+        // val fileCount = TransferHttpServer.listTransferFiles(this).size
+        // val url = if (TransferHttpServer.isRunning()) TransferHttpServer.getLocalUrl(this) else null
+        // val isHotspotMode = normalizeConnectionMode(currentMode) == MODE_HOTSPOT_PHONE
+        //
+        // tvTransferUrl.visibility = View.GONE
+        // btnTransferCopyUrl.visibility = View.GONE
+        //
+        // // Transfer URL intentionally hidden for now.
+        // // tvTransferUrl.text = url ?: getString(R.string.transfer_url_waiting)
+        // tvTransferStatus.text = when {
+        //     !TransferHttpServer.isRunning() -> getString(R.string.transfer_status_service_off)
+        //     url == null && isHotspotMode -> getString(R.string.transfer_status_waiting_hotspot)
+        //     url == null -> getString(R.string.transfer_status_waiting_network)
+        //     isHotspotMode -> resources.getQuantityString(
+        //         R.plurals.transfer_status_hotspot_files,
+        //         fileCount,
+        //         fileCount
+        //     )
+        //     else -> resources.getQuantityString(
+        //         R.plurals.transfer_status_network_files,
+        //         fileCount,
+        //         fileCount
+        //     )
+        // }
+        // // btnTransferCopyUrl.isEnabled = !url.isNullOrBlank()
+        return
     }
 
     private fun migrateSettings(prefs: android.content.SharedPreferences) {
