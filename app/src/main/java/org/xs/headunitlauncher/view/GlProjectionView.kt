@@ -136,6 +136,8 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
 
         @Volatile
         private var desaturation = 0.0f
+        @Volatile
+        private var isReleased = false
 
         fun setDesaturation(value: Float) {
             desaturation = value.coerceIn(0f, 1f)
@@ -146,17 +148,27 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
         fun getSurface(): Surface? = surface
 
         fun release() {
-            surface?.let { s ->
+            if (isReleased) return
+            isReleased = true
+
+            val releasedSurface = surface
+            val releasedSurfaceTexture = surfaceTexture
+            surface = null
+            surfaceTexture = null
+            updateSurface = false
+
+            releasedSurface?.let { s ->
                 Handler(Looper.getMainLooper()).post {
                     callbacks.forEach { it.onSurfaceDestroyed(s) }
                 }
             }
-            surface?.release()
-            surfaceTexture?.release()
+            releasedSurface?.release()
+            releasedSurfaceTexture?.release()
         }
 
         override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
             AppLog.i("GlProjectionView: onSurfaceCreated (GL Context)")
+            isReleased = false
             
             // Setup texture
             val textures = IntArray(1)
@@ -214,8 +226,9 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
         override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
             AppLog.i("GlProjectionView: onSurfaceChanged: ${width}x$height")
             GLES20.glViewport(0, 0, width, height)
+            val activeSurface = surface ?: return
             Handler(Looper.getMainLooper()).post {
-                callbacks.forEach { it.onSurfaceChanged(surface!!, width, height) }
+                callbacks.forEach { it.onSurfaceChanged(activeSurface, width, height) }
             }
         }
 

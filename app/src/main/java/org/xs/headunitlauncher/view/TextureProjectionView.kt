@@ -40,6 +40,8 @@ class TextureProjectionView @JvmOverloads constructor(
         this.translationY = 0f
     }
 
+    fun getSurface(): Surface? = surface
+
     // ----------------------------------------------------------------
     // Lifecycle & SurfaceTextureListener
     // ----------------------------------------------------------------
@@ -58,6 +60,9 @@ class TextureProjectionView @JvmOverloads constructor(
 
     override fun onSurfaceTextureSizeChanged(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
         AppLog.i("TextureProjectionView: Surface size changed: ${width}x$height")
+        surface?.let {
+            callbacks.forEach { cb -> cb.onSurfaceChanged(it, width, height) }
+        }
         ProjectionViewScaler.updateScale(this, videoWidth, videoHeight)
     }
 

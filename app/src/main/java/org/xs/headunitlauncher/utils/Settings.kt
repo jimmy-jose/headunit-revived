@@ -926,4 +926,8 @@ class Settings(context: Context) {
     var shouldPromptForLauncher: Boolean
         get() = prefs.getBoolean("should-prompt-for-launcher", true)
         set(value) { prefs.edit().putBoolean("should-prompt-for-launcher", value).apply() }
+
+    var helperTransferUrlDismissed: Boolean
+        get() = prefs.getBoolean("helper-transfer-url-dismissed", false)
+        set(value) { prefs.edit().putBoolean("helper-transfer-url-dismissed", value).apply() }
 }

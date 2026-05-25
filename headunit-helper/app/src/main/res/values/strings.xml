@@ -79,12 +79,32 @@
     <string name="export_log_title">Logs Exported</string>
     <string name="export_log_saved">Logs have been saved to:\n\n%s</string>
     <string name="share">Share</string>
+    <string name="unknown_error">Unknown error</string>
     <string name="crash_report_ready_title">Crash report ready</string>
     <string name="crash_report_ready_message">The helper recovered from a crash on %1$s.\nTap here to share the saved report.\n%2$s</string>
     <string name="share_crash_report">Share crash report</string>
     <string name="ignore_report">Ignore</string>
     <string name="crash_report_missing">The saved crash report is no longer available.</string>
     <string name="crash_report_ignored">Crash report ignored</string>
+    <string name="transfer_center_title">Transfer Center</string>
+    <string name="transfer_status_service_off">Start Wireless Helper to host the local transfer page.</string>
+    <string name="transfer_status_waiting_hotspot">Waiting for the hotspot IP. Once the helper hotspot is active, this URL will work from the head unit.</string>
+    <string name="transfer_status_waiting_network">Waiting for a reachable local network address.</string>
+    <plurals name="transfer_status_hotspot_files">
+        <item quantity="one">Hotspot transfer page is ready. %d file is available for download.</item>
+        <item quantity="other">Hotspot transfer page is ready. %d files are available for download.</item>
+    </plurals>
+    <plurals name="transfer_status_network_files">
+        <item quantity="one">Transfer page is running on the current network. %d file is available for download.</item>
+        <item quantity="other">Transfer page is running on the current network. %d files are available for download.</item>
+    </plurals>
+    <string name="transfer_url_waiting">Waiting for local URL…</string>
+    <string name="transfer_add_file">Add File</string>
+    <string name="transfer_copy_url">Copy URL</string>
+    <string name="transfer_url_unavailable">Transfer URL is not available yet.</string>
+    <string name="transfer_url_copied">Transfer URL copied</string>
+    <string name="transfer_file_added">Added %1$s to the transfer folder.</string>
+    <string name="transfer_file_add_failed">Could not add the file: %1$s</string>
 
     <!-- Language -->
     <string name="language_label">Language</string>

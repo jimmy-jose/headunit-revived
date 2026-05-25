@@ -22,6 +22,7 @@ import org.xs.hulhelper.strategy.StrategySharedNetwork
 import org.xs.hulhelper.strategy.StrategyWifiDirect
 import org.xs.hulhelper.net.WifiNetworkBinding
 import org.xs.hulhelper.strategy.StrategyNearby
+import org.xs.hulhelper.utils.TransferHttpServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,6 +52,7 @@ class WirelessHelperService : Service(), BaseStrategy.StateListener {
         super.onCreate()
         setupLocks()
         createNotificationChannel()
+        TransferHttpServer.start(this)
         startForeground(1, createNotification(getString(R.string.notif_searching)))
     }
 
@@ -234,6 +236,7 @@ class WirelessHelperService : Service(), BaseStrategy.StateListener {
             multicastLock?.release()
             releaseWakeLock()
         } catch (e: Exception) { }
+        TransferHttpServer.stop()
         serviceJob.cancel()
         updateAllUIs()
         super.onDestroy()

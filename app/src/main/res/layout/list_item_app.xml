@@ -13,7 +13,7 @@
         android:gravity="center_vertical|start"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
-        android:textColor="?android:attr/textColorPrimary"
+        android:textColor="@color/text_primary"
         app:cornerRadius="8dp" />
 
 </FrameLayout>

@@ -65,6 +65,11 @@ class WifiAutoStartReceiver : BroadcastReceiver() {
                     return
                 }
 
+                if (AapService.isServiceRunning()) {
+                    AppLog.d("WifiAutoStartReceiver: AapService is already running. Ignoring duplicate WiFi auto-start.")
+                    return
+                }
+
                 if (!BillingAccessEnforcer.ensureAccessOrLaunchGate(
                         context,
                         "WiFi auto-start",

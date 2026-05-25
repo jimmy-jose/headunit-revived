@@ -1,5 +1,6 @@
 package org.xs.headunitlauncher.aap
 
+import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -21,9 +22,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.R
 import org.xs.headunitlauncher.aap.protocol.messages.TouchEvent
@@ -36,6 +35,8 @@ import org.xs.headunitlauncher.decoder.VideoDecoder
 import org.xs.headunitlauncher.decoder.VideoDimensionsListener
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.IntentFilters
+import org.xs.headunitlauncher.utils.CrashReportStore
+import org.xs.headunitlauncher.utils.LauncherUtils
 import org.xs.headunitlauncher.view.IProjectionView
 import org.xs.headunitlauncher.view.GlProjectionView
 import org.xs.headunitlauncher.view.ProjectionView
@@ -58,6 +59,10 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private var isSurfaceSet = false
     private var overlayState = OverlayState.STARTING
     private val watchdogHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var lastSurfaceIdentity = 0
+    private var lastSurfaceWidth = -1
+    private var lastSurfaceHeight = -1
+    private var lastSurfaceChangedAt = 0L
 
     private var initialX = 0f
     private var initialY = 0f
@@ -116,14 +121,18 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     }
     private fun checkAndForceSurface() {
         AppLog.i("Watchdog: checkAndForceSurface executing...")
-        if (projectionView is TextureView) {
-            val tv = projectionView as TextureView
-            if (tv.isAvailable) {
-                AppLog.w("Watchdog: TextureView IS available. Forcing onSurfaceChanged.")
-                onSurfaceChanged(android.view.Surface(tv.surfaceTexture), tv.width, tv.height)
+        if (projectionView is TextureProjectionView) {
+            val tv = projectionView as TextureProjectionView
+            val surface = tv.getSurface()
+            if (tv.isAvailable && surface?.isValid == true) {
+                AppLog.w("Watchdog: TextureProjectionView IS available. Forcing onSurfaceChanged.")
+                onSurfaceChanged(surface, tv.width, tv.height)
             } else {
-                AppLog.e("Watchdog: TextureView NOT available. Vis=${tv.visibility}, W=${tv.width}, H=${tv.height}")
+                AppLog.e("Watchdog: TextureProjectionView NOT ready. Vis=${tv.visibility}, W=${tv.width}, H=${tv.height}, hasSurface=${surface != null}, valid=${surface?.isValid == true}")
             }
+        } else if (projectionView is TextureView) {
+            val tv = projectionView as TextureView
+            AppLog.e("Watchdog: Unexpected raw TextureView projection class. Vis=${tv.visibility}, W=${tv.width}, H=${tv.height}, available=${tv.isAvailable}")
         } else if (projectionView is GlProjectionView) {
              val gles = projectionView as GlProjectionView
              if (gles.isSurfaceValid()) {
@@ -233,53 +242,85 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
         var isFirstEmission = true
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                commManager.connectionState.collect { state ->
-                    val first = isFirstEmission
-                    isFirstEmission = false
-                    
-                    if (first && state is CommManager.ConnectionState.Disconnected) {
-                        AppLog.i("AapProjectionActivity: Ignoring initial Disconnected state from StateFlow replay.")
-                        return@collect
-                    }
+            commManager.connectionState.collect { state ->
+                val first = isFirstEmission
+                isFirstEmission = false
 
-                    when (state) {
-                        is CommManager.ConnectionState.Disconnected -> {
-                            watchdogHandler.removeCallbacksAndMessages(null)
-                            if (!state.isClean && !state.isUserExit) {
-                                AppLog.w("AapProjectionActivity: Disconnected unexpectedly.")
+                if (first && state is CommManager.ConnectionState.Disconnected) {
+                    AppLog.i("AapProjectionActivity: Ignoring initial Disconnected state from StateFlow replay.")
+                    return@collect
+                }
+
+                when (state) {
+                    is CommManager.ConnectionState.Disconnected -> {
+                        watchdogHandler.removeCallbacksAndMessages(null)
+                        noteDisconnect(state.isClean, state.isUserExit)
+                        CrashReportStore.noteBreadcrumb(
+                            this@AapProjectionActivity,
+                            "Projection observed disconnect clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                        )
+                        CrashReportStore.updateState(
+                            this@AapProjectionActivity,
+                            "projection_disconnect_observed",
+                            "clean=${state.isClean},userExit=${state.isUserExit},foreground=$isForeground,defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                        )
+                        if (!state.isClean && !state.isUserExit) {
+                            AppLog.w("AapProjectionActivity: Disconnected unexpectedly.")
+                            if (isForeground) {
                                 Toast.makeText(this@AapProjectionActivity, getString(R.string.wifi_disconnect_toast), Toast.LENGTH_LONG).show()
                             }
-                            // Only finish immediately if the user explicitly exited or it was a clean close.
-                            if (state.isUserExit || state.isClean) {
-                                AppLog.i("AapProjectionActivity: Finishing because state isUserExit=${state.isUserExit}, isClean=${state.isClean}")
-                                hideReconnectingOverlay()
-                                finish()
-                            } else {
-                                // For unexpected disconnects (especially Wireless), wait a tiny bit to see if service restarts it
-                                watchdogHandler.postDelayed({
-                                    if (commManager.connectionState.value is CommManager.ConnectionState.Disconnected) {
-                                        AppLog.i("AapProjectionActivity: Finishing after delay due to Disconnected state.")
-                                        hideReconnectingOverlay()
-                                        finish()
-                                    }
-                                }, 2000)
-                            }
                         }
-                        is CommManager.ConnectionState.HandshakeComplete -> {
-                            // Lock the resolution so that orientation changes don't cause re-negotiation
-                            HeadUnitScreenConfig.lockResolution()
-                            
-                            // Handshake done. If the surface is already ready (e.g. reconnect
-                            // while the activity is in the foreground), start reading immediately.
-                            // If not, onSurfaceChanged() will call startReading() when the surface
-                            // becomes available.
-                            if (isSurfaceSet) {
-                                commManager.startReading()
-                            }
+                        val shouldFinishImmediately =
+                            state.isUserExit ||
+                            state.isClean ||
+                            !isForeground ||
+                            LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)
+                        if (shouldFinishImmediately) {
+                            AppLog.i(
+                                "AapProjectionActivity: Finishing immediately because userExit=${state.isUserExit}, clean=${state.isClean}, foreground=$isForeground, defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                            )
+                            CrashReportStore.noteBreadcrumb(
+                                this@AapProjectionActivity,
+                                "Projection finish immediate clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground"
+                            )
+                            CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-immediate")
+                            hideReconnectingOverlay()
+                            finish()
+                        } else {
+                            CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection finish delayed pending reconnect")
+                            CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-delay")
+                            watchdogHandler.postDelayed({
+                                if (commManager.connectionState.value is CommManager.ConnectionState.Disconnected) {
+                                    AppLog.i("AapProjectionActivity: Finishing after delay due to Disconnected state.")
+                                    CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection finish delayed fired")
+                                    CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-delay-fired")
+                                    hideReconnectingOverlay()
+                                    finish()
+                                }
+                            }, 2000)
                         }
-                        else -> {}
                     }
+                    is CommManager.ConnectionState.HandshakeComplete -> {
+                        clearRecentDisconnect()
+                        CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection handshake complete; launch cooldown cleared")
+                        CrashReportStore.updateState(this@AapProjectionActivity, "projection_launch_guard", autoLaunchGuardSummary())
+                        // Lock the resolution so that orientation changes don't cause re-negotiation
+                        HeadUnitScreenConfig.lockResolution()
+
+                        // Handshake done. If the surface is already ready (e.g. reconnect
+                        // while the activity is in the foreground), start reading immediately.
+                        // If not, onSurfaceChanged() will call startReading() when the surface
+                        // becomes available.
+                        if (isSurfaceSet) {
+                            commManager.startReading()
+                        }
+                    }
+                    is CommManager.ConnectionState.TransportStarted -> {
+                        clearRecentDisconnect()
+                        CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection transport started; launch cooldown cleared")
+                        CrashReportStore.updateState(this@AapProjectionActivity, "projection_launch_guard", autoLaunchGuardSummary())
+                    }
+                    else -> {}
                 }
             }
         }
@@ -382,7 +423,12 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onPause() {
         isForeground = false
+        lastPauseElapsedRealtime = SystemClock.elapsedRealtime()
         AppLog.i("AapProjectionActivity: onPause")
+        CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onPause guard=${autoLaunchGuardSummary()}")
+        CrashReportStore.updateState(this, "projection_activity", "paused")
+        CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
+        (projectionView as? GlProjectionView)?.onPause()
         super.onPause()
         watchdogHandler.removeCallbacks(watchdogRunnable)
         watchdogHandler.removeCallbacks(videoWatchdogRunnable)
@@ -405,6 +451,10 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         super.onResume()
         isForeground = true
         AppLog.i("AapProjectionActivity: onResume")
+        CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onResume guard=${autoLaunchGuardSummary()}")
+        CrashReportStore.updateState(this, "projection_activity", "resumed")
+        CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
+        (projectionView as? GlProjectionView)?.onResume()
         applyStickyOrientation()
         watchdogHandler.postDelayed(watchdogRunnable, 2000)
         watchdogHandler.postDelayed(videoWatchdogRunnable, 3000)
@@ -430,6 +480,22 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         })
 
         setFullscreen()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onStop connected=${commManager.isConnected} guard=${autoLaunchGuardSummary()}")
+        CrashReportStore.updateState(this, "projection_activity", "stopped")
+        CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
+        if (!isChangingConfigurations &&
+            !App.isPiPActive &&
+            commManager.connectionState.value is CommManager.ConnectionState.Disconnected
+        ) {
+            AppLog.i("AapProjectionActivity: onStop while disconnected, finishing stale projection activity")
+            CrashReportStore.noteBreadcrumb(this, "Projection finish from onStop while disconnected")
+            CrashReportStore.updateState(this, "projection_finish_reason", "onStop-disconnected")
+            finish()
+        }
     }
 
 
@@ -654,11 +720,29 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onSurfaceCreated(surface: android.view.Surface) {
         AppLog.i("[UI_DEBUG] [AapProjectionActivity] onSurfaceCreated")
+        CrashReportStore.noteBreadcrumb(this, "Projection surface created id=${System.identityHashCode(surface)}")
         // Decoder configuration is now in onSurfaceChanged
     }
 
     override fun onSurfaceChanged(surface: android.view.Surface, width: Int, height: Int) {
+        val surfaceIdentity = System.identityHashCode(surface)
+        val now = SystemClock.elapsedRealtime()
+        if (surfaceIdentity == lastSurfaceIdentity &&
+            width == lastSurfaceWidth &&
+            height == lastSurfaceHeight &&
+            now - lastSurfaceChangedAt < 750L
+        ) {
+            AppLog.i("[UI_DEBUG] [AapProjectionActivity] Ignoring duplicate onSurfaceChanged for same surface ${width}x$height")
+            return
+        }
+
+        lastSurfaceIdentity = surfaceIdentity
+        lastSurfaceWidth = width
+        lastSurfaceHeight = height
+        lastSurfaceChangedAt = now
         AppLog.i("[UI_DEBUG] [AapProjectionActivity] onSurfaceChanged. Actual surface dimensions: width=$width, height=$height")
+        CrashReportStore.noteBreadcrumb(this, "Projection surface changed id=$surfaceIdentity ${width}x$height state=${commManager.connectionState.value::class.java.simpleName}")
+        CrashReportStore.updateState(this, "projection_surface", "${width}x$height")
         isSurfaceSet = true
         
         videoDecoder.setSurface(surface)
@@ -730,8 +814,16 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onSurfaceDestroyed(surface: android.view.Surface) {
         AppLog.i("SurfaceCallback: onSurfaceDestroyed. Surface: $surface")
+        CrashReportStore.noteBreadcrumb(this, "Projection surface destroyed id=${System.identityHashCode(surface)} state=${commManager.connectionState.value::class.java.simpleName}")
+        CrashReportStore.updateState(this, "projection_surface", "destroyed")
         isSurfaceSet = false
-        commManager.send(VideoFocusEvent(gain = false, unsolicited = false))
+        lastSurfaceIdentity = 0
+        lastSurfaceWidth = -1
+        lastSurfaceHeight = -1
+        lastSurfaceChangedAt = 0L
+        if (commManager.connectionState.value !is CommManager.ConnectionState.Disconnected) {
+            commManager.send(VideoFocusEvent(gain = false, unsolicited = false))
+        }
         videoDecoder.setSurface(null)
     }
 
@@ -864,7 +956,10 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     }
 
     override fun onDestroy() {
+        projectionView.removeCallback(this)
         super.onDestroy()
+        CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onDestroy finishing=$isFinishing")
+        CrashReportStore.updateState(this, "projection_activity", "destroyed")
         if (isFinishReceiverRegistered) {
             unregisterReceiver(finishReceiver)
             isFinishReceiverRegistered = false
@@ -881,10 +976,51 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     companion object {
         const val EXTRA_FOCUS = "focus"
         @Volatile var isForeground = false
+        @Volatile private var lastPauseElapsedRealtime = 0L
+        @Volatile private var lastDisconnectElapsedRealtime = 0L
+        private const val RELAUNCH_COOLDOWN_MS = 2_000L
+        private const val DISCONNECT_RELAUNCH_COOLDOWN_MS = 6_000L
+
+        fun wasRecentlyPaused(): Boolean {
+            val lastPause = lastPauseElapsedRealtime
+            return lastPause > 0L && SystemClock.elapsedRealtime() - lastPause < RELAUNCH_COOLDOWN_MS
+        }
+
+        fun noteDisconnect(isClean: Boolean, isUserExit: Boolean) {
+            lastDisconnectElapsedRealtime = SystemClock.elapsedRealtime()
+            AppLog.i("AapProjectionActivity: Recorded disconnect cooldown clean=$isClean userExit=$isUserExit")
+        }
+
+        fun clearRecentDisconnect() {
+            lastDisconnectElapsedRealtime = 0L
+        }
+
+        fun wasRecentlyDisconnected(): Boolean {
+            val lastDisconnect = lastDisconnectElapsedRealtime
+            return lastDisconnect > 0L &&
+                SystemClock.elapsedRealtime() - lastDisconnect < DISCONNECT_RELAUNCH_COOLDOWN_MS
+        }
+
+        fun shouldSuppressAutoLaunch(): Boolean {
+            return wasRecentlyPaused() || wasRecentlyDisconnected()
+        }
+
+        fun autoLaunchGuardSummary(): String {
+            val now = SystemClock.elapsedRealtime()
+            val pauseAge = lastPauseElapsedRealtime
+                .takeIf { it > 0L }
+                ?.let { now - it }
+            val disconnectAge = lastDisconnectElapsedRealtime
+                .takeIf { it > 0L }
+                ?.let { now - it }
+            return "suppress=${shouldSuppressAutoLaunch()},foreground=$isForeground,pauseAgeMs=${pauseAge ?: -1},disconnectAgeMs=${disconnectAge ?: -1}"
+        }
 
         fun intent(context: Context): Intent {
             val aapIntent = Intent(context, AapProjectionActivity::class.java)
-            aapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (context !is Activity) {
+                aapIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
             return aapIntent
         }
     }

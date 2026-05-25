@@ -34,6 +34,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.xs.hulhelper.connection.WifiDirectNameDiscoveryManager
+import org.xs.hulhelper.utils.TransferHttpServer
 import org.xs.hulhelper.utils.CrashReportStore
 import java.io.File
 import java.io.FileOutputStream
@@ -53,10 +54,37 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission()
     ) { _: Boolean -> }
 
+    private val transferFilePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+
+        try {
+            val savedFile = TransferHttpServer.importFile(this, uri)
+            Toast.makeText(
+                this,
+                getString(R.string.transfer_file_added, savedFile.name),
+                Toast.LENGTH_LONG
+            ).show()
+            updateTransferCenterCard()
+        } catch (e: Exception) {
+            Toast.makeText(
+                this,
+                getString(R.string.transfer_file_add_failed, e.message ?: getString(R.string.unknown_error)),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     private lateinit var btnToggleService: Button
     private lateinit var cardCrashReport: View
     private lateinit var tvCrashReportMessage: TextView
     private lateinit var btnIgnoreCrashReport: Button
+    private lateinit var cardTransferCenter: View
+    private lateinit var tvTransferStatus: TextView
+    private lateinit var tvTransferUrl: TextView
+    private lateinit var btnTransferAddFile: Button
+    private lateinit var btnTransferCopyUrl: Button
     private lateinit var layoutConnectionMode: View
     private lateinit var tvConnectionModeValue: TextView
     private lateinit var layoutStaticIp: View
@@ -99,6 +127,7 @@ class MainActivity : AppCompatActivity() {
                 lastRunningState = running
                 lastConnectedState = connected
             }
+            updateTransferCenterCard()
             handler.postDelayed(this, 1000)
         }
     }
@@ -170,6 +199,11 @@ class MainActivity : AppCompatActivity() {
         cardCrashReport = findViewById(R.id.cardCrashReport)
         tvCrashReportMessage = findViewById(R.id.tvCrashReportMessage)
         btnIgnoreCrashReport = findViewById(R.id.btnIgnoreCrashReport)
+        cardTransferCenter = findViewById(R.id.cardTransferCenter)
+        tvTransferStatus = findViewById(R.id.tvTransferStatus)
+        tvTransferUrl = findViewById(R.id.tvTransferUrl)
+        btnTransferAddFile = findViewById(R.id.btnTransferAddFile)
+        btnTransferCopyUrl = findViewById(R.id.btnTransferCopyUrl)
         layoutConnectionMode = findViewById(R.id.layoutConnectionMode)
         tvConnectionModeValue = findViewById(R.id.tvConnectionModeValue)
         layoutStaticIp = findViewById(R.id.layoutStaticIp)
@@ -224,6 +258,21 @@ class MainActivity : AppCompatActivity() {
             CrashReportStore.ignorePendingReport(this)
             updateCrashReportBanner()
             Toast.makeText(this, R.string.crash_report_ignored, Toast.LENGTH_SHORT).show()
+        }
+
+        btnTransferAddFile.setOnClickListener {
+            transferFilePickerLauncher.launch(arrayOf("*/*"))
+        }
+
+        btnTransferCopyUrl.setOnClickListener {
+            val url = TransferHttpServer.getLocalUrl(this)
+            if (url.isNullOrBlank()) {
+                Toast.makeText(this, R.string.transfer_url_unavailable, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("HUL Transfer URL", url))
+            Toast.makeText(this, R.string.transfer_url_copied, Toast.LENGTH_SHORT).show()
         }
 
         btnToggleService.setOnClickListener {
@@ -521,6 +570,7 @@ class MainActivity : AppCompatActivity() {
         tvLanguageValue.text = languageOptions[langIndex]
         updateButtonState(WirelessHelperService.isRunning, WirelessHelperService.isConnected)
         updateCrashReportBanner()
+        updateTransferCenterCard()
     }
 
     private fun updateCrashReportBanner() {
@@ -535,6 +585,32 @@ class MainActivity : AppCompatActivity() {
                 report.summary
             )
         }
+    }
+
+    private fun updateTransferCenterCard() {
+        val currentMode = getSharedPreferences("WirelessHelperPrefs", Context.MODE_PRIVATE)
+            .getInt("connection_mode", 0)
+        val fileCount = TransferHttpServer.listTransferFiles(this).size
+        val url = if (TransferHttpServer.isRunning()) TransferHttpServer.getLocalUrl(this) else null
+        val isHotspotMode = normalizeConnectionMode(currentMode) == MODE_HOTSPOT_PHONE
+
+        tvTransferUrl.text = url ?: getString(R.string.transfer_url_waiting)
+        tvTransferStatus.text = when {
+            !TransferHttpServer.isRunning() -> getString(R.string.transfer_status_service_off)
+            url == null && isHotspotMode -> getString(R.string.transfer_status_waiting_hotspot)
+            url == null -> getString(R.string.transfer_status_waiting_network)
+            isHotspotMode -> resources.getQuantityString(
+                R.plurals.transfer_status_hotspot_files,
+                fileCount,
+                fileCount
+            )
+            else -> resources.getQuantityString(
+                R.plurals.transfer_status_network_files,
+                fileCount,
+                fileCount
+            )
+        }
+        btnTransferCopyUrl.isEnabled = !url.isNullOrBlank()
     }
 
     private fun migrateSettings(prefs: android.content.SharedPreferences) {

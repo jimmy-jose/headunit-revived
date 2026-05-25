@@ -135,7 +135,7 @@
     <string name="export_logs">Export Logs</string>
     <string name="export_logs_description">Save logs for debugging</string>
     <string name="crash_report_ready_title">Crash report ready</string>
-    <string name="crash_report_ready_message">The app recovered from a crash on %1$s.\nUse Share to send the saved report.\n%2$s</string>
+    <string name="crash_report_ready_message">The app recovered from a crash on %1$s.\nUse Share to send the saved report. A copy is also saved to /Download/HUL.\n%2$s</string>
     <string name="share_crash_report">Share crash report</string>
     <string name="clear_crash_report">Clear report</string>
     <string name="ignore_report">Ignore</string>
@@ -532,6 +532,8 @@
     <string name="wireless_helper_tutorial_step2_body">Tap “Switch To Wireless Helper” on the home warning card, or choose Wireless Helper in Wireless Connection settings. Keep Bluetooth and Wi-Fi enabled on the phone.</string>
     <string name="wireless_helper_tutorial_step3_title">3. Open the helper on your phone and follow its prompts</string>
     <string name="wireless_helper_tutorial_step3_body">Start the helper app on your phone, allow the permissions it asks for, then connect to this head unit when it appears. Once the helper finishes, Android Auto should launch normally.</string>
+    <string name="helper_transfer_title">Phone Transfer URL</string>
+    <string name="helper_transfer_message">Open this URL in a browser while connected to the phone hotspot to download APKs or upload logs:\n%1$s</string>
     <string name="wireless_helper_tutorial_screenshot_placeholder">Screenshot placeholder</string>
 
     <string name="wait_for_wifi">Wait for WiFi before WiFi Direct</string>

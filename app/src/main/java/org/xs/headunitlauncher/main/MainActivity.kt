@@ -32,6 +32,7 @@ import android.content.res.Configuration
 import androidx.navigation.fragment.NavHostFragment
 import org.xs.headunitlauncher.utils.Settings
 import org.xs.headunitlauncher.utils.LauncherUtils
+import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.SetupWizard
 import org.xs.headunitlauncher.utils.SystemUI
 import kotlinx.coroutines.Dispatchers
@@ -109,14 +110,28 @@ class MainActivity : BaseActivity() {
 
         logLaunchSource()
 
-        // If an Android Auto session is active, bring the projection activity to front
-        if (App.provide(this).commManager.isConnected && !App.isPiPActive) {
+        // If an Android Auto session is active, bring the projection activity to front.
+        // Suppress this during the pause/disconnect cooldown window to avoid relaunching
+        // projection while the old activity/surface is still tearing down.
+        if (App.provide(this).commManager.isConnected &&
+            !App.isPiPActive &&
+            !AapProjectionActivity.shouldSuppressAutoLaunch()
+        ) {
             AppLog.i("MainActivity: Active session detected in onCreate, bringing projection to front")
+            CrashReportStore.noteBreadcrumb(this, "MainActivity.onCreate launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onCreate allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
             val aapIntent = AapProjectionActivity.intent(this).apply {
                 putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
                 addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             startActivity(aapIntent)
+        } else if (App.provide(this).commManager.isConnected &&
+            !App.isPiPActive &&
+            AapProjectionActivity.shouldSuppressAutoLaunch()
+        ) {
+            AppLog.i("MainActivity: Suppressing projection relaunch in onCreate due to recent pause/disconnect cooldown")
+            CrashReportStore.noteBreadcrumb(this, "MainActivity.onCreate suppressed projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onCreate suppressed ${AapProjectionActivity.autoLaunchGuardSummary()}")
         }
 
         val mainSettings = Settings(this)
@@ -239,6 +254,7 @@ class MainActivity : BaseActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        logLaunchSource()
         handleLaunchIntent(intent)
     }
 
@@ -255,13 +271,21 @@ class MainActivity : BaseActivity() {
 
         val isLauncherTap = intent?.action == Intent.ACTION_MAIN &&
                 intent.hasCategory(Intent.CATEGORY_LAUNCHER)
+        val isHomeLaunch = intent?.action == Intent.ACTION_MAIN &&
+                intent.hasCategory(Intent.CATEGORY_HOME)
 
         if (isLauncherTap) {
             AppLog.i("App launched by user tap (referrer: ${referrer ?: "none"})")
+            CrashReportStore.updateState(this, "main_launch_source", "launcher")
+        } else if (isHomeLaunch) {
+            AppLog.i("App launched as default Home (referrer: ${referrer ?: "none"})")
+            CrashReportStore.updateState(this, "main_launch_source", "home")
         } else if (referrer != null) {
             AppLog.i("App launched by third party: $referrer (action: ${intent?.action})")
+            CrashReportStore.updateState(this, "main_launch_source", "third-party action=${intent?.action}")
         } else {
             AppLog.i("App launched, source unknown (action: ${intent?.action})")
+            CrashReportStore.updateState(this, "main_launch_source", "unknown action=${intent?.action}")
         }
     }
 
@@ -398,13 +422,27 @@ class MainActivity : BaseActivity() {
         }
 
         // If an Android Auto session is active, bring the projection activity to front
-        if (App.provide(this).commManager.isConnected && !App.isPiPActive && !AapProjectionActivity.isForeground) {
+        if (App.provide(this).commManager.isConnected &&
+            !App.isPiPActive &&
+            !AapProjectionActivity.isForeground &&
+            !AapProjectionActivity.shouldSuppressAutoLaunch()
+        ) {
             AppLog.i("MainActivity: Active session detected, bringing projection to front")
+            CrashReportStore.noteBreadcrumb(this, "MainActivity.onResume launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onResume allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
             val aapIntent = AapProjectionActivity.intent(this).apply {
                 putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
                 addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
             startActivity(aapIntent)
+        } else if (App.provide(this).commManager.isConnected &&
+            !App.isPiPActive &&
+            !AapProjectionActivity.isForeground &&
+            AapProjectionActivity.shouldSuppressAutoLaunch()
+        ) {
+            AppLog.i("MainActivity: Suppressing projection relaunch because AapProjectionActivity is in recent pause/disconnect cooldown")
+            CrashReportStore.noteBreadcrumb(this, "MainActivity.onResume suppressed projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onResume suppressed ${AapProjectionActivity.autoLaunchGuardSummary()}")
         }
     }
 

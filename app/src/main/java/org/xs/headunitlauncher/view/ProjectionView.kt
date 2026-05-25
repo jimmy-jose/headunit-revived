@@ -5,7 +5,6 @@ import android.util.AttributeSet
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import org.xs.headunitlauncher.App
-import org.xs.headunitlauncher.decoder.VideoDecoder
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.HeadUnitScreenConfig
 
@@ -14,18 +13,11 @@ class ProjectionView @JvmOverloads constructor(
 ) : SurfaceView(context, attrs, defStyleAttr), IProjectionView, SurfaceHolder.Callback {
 
     private val callbacks = mutableListOf<IProjectionView.Callbacks>()
-    private var videoDecoder: VideoDecoder? = null
     private var videoWidth = 0
     private var videoHeight = 0
 
     init {
-        videoDecoder = App.provide(context).videoDecoder
         holder.addCallback(this)
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        videoDecoder?.stop("onDetachedFromWindow")
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -46,7 +38,6 @@ class ProjectionView @JvmOverloads constructor(
 
     override fun surfaceDestroyed(holder: SurfaceHolder) {
         AppLog.i("holder $holder")
-        videoDecoder?.stop("surfaceDestroyed")
         callbacks.forEach { it.onSurfaceDestroyed(holder.surface) }
     }
 

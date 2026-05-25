@@ -34,6 +34,9 @@ class App : Application() {
         super.onCreate()
 
         CrashReportStore.install(this)
+        CrashReportStore.noteBreadcrumb(this, "App.onCreate sdk=${Build.VERSION.SDK_INT} unlocked=${isUserUnlocked()}")
+        CrashReportStore.updateState(this, "process_start_wall", CrashReportStore.formatTimestamp(System.currentTimeMillis()))
+        CrashReportStore.updateState(this, "process_start_elapsed", SystemClock.elapsedRealtime().toString())
         
         // Enable vector drawable support on older Android versions
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true)

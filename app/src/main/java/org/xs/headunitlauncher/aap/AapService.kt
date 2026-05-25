@@ -1,6 +1,7 @@
 package org.xs.headunitlauncher.aap
 
 import android.app.Notification
+import android.app.ActivityManager
 import android.app.PendingIntent
 import android.app.Service
 import android.app.UiModeManager
@@ -38,6 +39,7 @@ import org.xs.headunitlauncher.aap.protocol.messages.NightModeEvent
 import org.xs.headunitlauncher.aap.protocol.proto.MediaPlayback
 import org.xs.headunitlauncher.connection.CommManager
 import org.xs.headunitlauncher.connection.NetworkDiscovery
+import org.xs.headunitlauncher.utils.LauncherUtils
 import org.xs.headunitlauncher.connection.WifiDirectManager
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.MediaMetadataCompat
@@ -48,6 +50,7 @@ import org.xs.headunitlauncher.connection.UsbDeviceCompat
 import org.xs.headunitlauncher.connection.UsbReceiver
 import org.xs.headunitlauncher.location.GpsLocationService
 import org.xs.headunitlauncher.utils.AppLog
+import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.LocaleHelper
 import org.xs.headunitlauncher.utils.LogExporter
 import org.xs.headunitlauncher.utils.NightModeManager
@@ -589,15 +592,8 @@ class AapService : Service(), UsbReceiver.Listener {
                 AppLog.i("WakeDetect: connection active, but PiP is active. Skipping return to full screen.")
                 return
             }
-            AppLog.i("WakeDetect: connection active, returning to projection")
-            try {
-                val projectionIntent = AapProjectionActivity.intent(this).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-                }
-                startActivity(projectionIntent)
-            } catch (e: Exception) {
-                AppLog.e("WakeDetect: failed to launch projection: ${e.message}")
-            }
+            AppLog.i("WakeDetect: connection active, requesting projection return")
+            launchAapProjectionActivity()
             return
         }
 
@@ -628,6 +624,8 @@ class AapService : Service(), UsbReceiver.Listener {
         super.onCreate()
         isRunning = true
         AppLog.i("AapService creating...")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onCreate")
+        CrashReportStore.updateState(this, "aap_service", "creating")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(1, createNotification(),
@@ -647,9 +645,6 @@ class AapService : Service(), UsbReceiver.Listener {
         observeConnectionState()
         registerReceivers()
         
-        // Handle immediate WiFi auto-start check (e.g. if already connected on boot/wake)
-        WifiAutoStartReceiver.checkAndStart(this)
-
         // Initialize MediaSession early and set it active immediately.
         // This ensures media button routing works even BEFORE an AA connection,
         // which is critical for keymap configuration and early button presses.
@@ -927,8 +922,18 @@ class AapService : Service(), UsbReceiver.Listener {
     private fun launchAapProjectionActivity() {
         if (App.isPiPActive) {
             AppLog.i("AapService: Skipping projection launch because PiP is active")
+            CrashReportStore.noteBreadcrumb(this, "AapService projection launch skipped PiP guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "AapService skipped-pip ${AapProjectionActivity.autoLaunchGuardSummary()}")
             return
         }
+        if (AapProjectionActivity.shouldSuppressAutoLaunch()) {
+            AppLog.i("AapService: Suppressing projection launch during recent pause/disconnect cooldown")
+            CrashReportStore.noteBreadcrumb(this, "AapService suppressed projection launch guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "AapService suppressed ${AapProjectionActivity.autoLaunchGuardSummary()}")
+            return
+        }
+        CrashReportStore.noteBreadcrumb(this, "AapService launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+        CrashReportStore.updateState(this, "projection_auto_launch", "AapService allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
         startActivity(AapProjectionActivity.intent(this).apply {
             putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
             addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -1008,6 +1013,12 @@ class AapService : Service(), UsbReceiver.Listener {
      * 4. Scheduling a reconnect attempt if applicable (see [scheduleReconnectIfNeeded])
      */
     private fun onDisconnected(state: CommManager.ConnectionState.Disconnected) {
+        AapProjectionActivity.noteDisconnect(state.isClean, state.isUserExit)
+        CrashReportStore.noteBreadcrumb(
+            this,
+            "AapService marked projection disconnect cooldown clean=${state.isClean} userExit=${state.isUserExit} guard=${AapProjectionActivity.autoLaunchGuardSummary()}"
+        )
+        CrashReportStore.updateState(this, "projection_launch_guard", AapProjectionActivity.autoLaunchGuardSummary())
         isSwitchingToAccessory.set(false)
         releaseWifiLock()
 
@@ -1062,6 +1073,16 @@ class AapService : Service(), UsbReceiver.Listener {
             }
             App.provide(this@AapService).audioDecoder.stop()
             App.provide(this@AapService).videoDecoder.stop("AapService::onDisconnect")
+            CrashReportStore.noteBreadcrumb(
+                this@AapService,
+                "AapService.onDisconnect clean=${state.isClean} userExit=${state.isUserExit}"
+            )
+            CrashReportStore.updateState(
+                this@AapService,
+                "aap_disconnect",
+                "clean=${state.isClean},userExit=${state.isUserExit}"
+            )
+            scheduleReconnectIfNeeded(state)
         }
 
         // [FIX] Set cooldown flag for ALL user exits (not just USB).
@@ -1072,7 +1093,6 @@ class AapService : Service(), UsbReceiver.Listener {
             AppLog.i("AapService: User exit cooldown active for ${USER_EXIT_COOLDOWN_MS}ms")
         }
 
-        scheduleReconnectIfNeeded(state)
     }
 
     /**
@@ -1098,9 +1118,11 @@ class AapService : Service(), UsbReceiver.Listener {
             // Skip reconnect for user-initiated exits — the user explicitly wants to stop.
             if (state.isUserExit) {
                 AppLog.i("AapService: User exit with wirelessServer active. Not restarting discovery.")
+                CrashReportStore.noteBreadcrumb(this, "Reconnect skipped after user exit")
                 return
             }
             AppLog.i("AapService: Disconnected. Restarting discovery loop in 2s...")
+            CrashReportStore.noteBreadcrumb(this, "Reconnect scheduled in 2s")
             serviceScope.launch {
                 delay(2000)
                 if (!commManager.isConnected) {
@@ -1468,7 +1490,17 @@ class AapService : Service(), UsbReceiver.Listener {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        AppLog.i("AapService: onTaskRemoved — attempting restart")
+        val defaultHome = LauncherUtils.isDefaultHomeApp(this)
+        val shouldRestart = !isDestroying && !defaultHome && (commManager.isConnected || selfMode)
+        AppLog.i(
+            "AapService: onTaskRemoved — defaultHome=$defaultHome, connected=${commManager.isConnected}, selfMode=$selfMode, isDestroying=$isDestroying, shouldRestart=$shouldRestart"
+        )
+        CrashReportStore.noteBreadcrumb(this, "AapService.onTaskRemoved restart=$shouldRestart defaultHome=$defaultHome connected=${commManager.isConnected}")
+        CrashReportStore.updateState(this, "aap_task_removed", "restart=$shouldRestart")
+        if (!shouldRestart) {
+            super.onTaskRemoved(rootIntent)
+            return
+        }
         try {
             val restartIntent = Intent(this, AapService::class.java)
             ContextCompat.startForegroundService(this, restartIntent)
@@ -1480,6 +1512,8 @@ class AapService : Service(), UsbReceiver.Listener {
 
     override fun onDestroy() {
         AppLog.i("AapService destroying... (wakeLock held=${bootWakeLock?.isHeld == true})")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onDestroy connected=${commManager.isConnected} selfMode=$selfMode")
+        CrashReportStore.updateState(this, "aap_service", "destroying")
         isDestroying = true
         isRunning = false
         mediaMetadataDecodeJob?.cancel()
@@ -1544,14 +1578,9 @@ class AapService : Service(), UsbReceiver.Listener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(1, createNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-        } else {
-            startForeground(1, createNotification())
-        }
-
-        // Handle stop before re-posting the notification to avoid a flash
+        CrashReportStore.noteBreadcrumb(this, "AapService.onStartCommand action=${intent?.action ?: "<default>"} startId=$startId")
+        CrashReportStore.updateState(this, "aap_last_action", intent?.action ?: "<default>")
+        // Handle stop before re-posting the foreground notification to avoid a flash
         if (intent?.action == ACTION_STOP_SERVICE) {
             AppLog.i("Stop action received. Broadcasting finish request to activities.")
             sendBroadcast(Intent("org.xs.headunitlauncher.ACTION_FINISH_ACTIVITIES").apply {
@@ -1562,6 +1591,13 @@ class AapService : Service(), UsbReceiver.Listener {
             stopForeground(true)
             stopSelf()
             return START_NOT_STICKY
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(1, createNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+        } else {
+            startForeground(1, createNotification())
         }
 
         val actionRequiringAccess = when (intent?.action) {
@@ -2156,9 +2192,26 @@ class AapService : Service(), UsbReceiver.Listener {
     private fun launchMainActivityIfNeeded(source: String) {
         val settings = App.provide(this).settings
         if (!settings.autoStartOnUsb || !settings.reopenOnReconnection) return
+        if (isOwnUiVisible()) {
+            AppLog.i("Reopen on reconnection: UI already visible, skipping launch ($source)")
+            return
+        }
 
         AppLog.i("Reopen on reconnection: launching MainActivity ($source)")
         launchMainActivityOnBoot()
+    }
+
+    private fun isOwnUiVisible(): Boolean {
+        val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return false
+        val topClassName = activityManager.appTasks
+            .firstOrNull()
+            ?.taskInfo
+            ?.topActivity
+            ?.className
+            ?: return false
+
+        return topClassName == MainActivity::class.java.name ||
+            topClassName == AapProjectionActivity::class.java.name
     }
 
     private fun launchMainActivityOnBoot() {
@@ -2513,6 +2566,8 @@ class AapService : Service(), UsbReceiver.Listener {
         private var lastInteractiveStartAt = 0L
         private const val INTERACTIVE_START_DEBOUNCE_MS = 2_500L
 
+        fun isServiceRunning(): Boolean = isRunning
+
         fun startInteractive(context: Context, intent: Intent) {
             val action = intent.action
             val isDefaultStart = action == null || action == Intent.ACTION_MAIN
@@ -2520,7 +2575,7 @@ class AapService : Service(), UsbReceiver.Listener {
 
             if (isDefaultStart) {
                 val recent = now - lastInteractiveStartAt < INTERACTIVE_START_DEBOUNCE_MS
-                if (isRunning || recent) {
+                if (recent) {
                     AppLog.i(
                         "AapService: skipping redundant interactive start " +
                             "(running=$isRunning, recent=${now - lastInteractiveStartAt}ms, action=${action ?: "<default>"})"

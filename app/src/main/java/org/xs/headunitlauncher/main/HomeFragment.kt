@@ -19,6 +19,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
 import android.os.Build
 import androidx.fragment.app.Fragment
 import androidx.core.content.ContextCompat
@@ -92,6 +93,9 @@ class HomeFragment : Fragment() {
     private var crashReportClearButton: Button? = null
     private var trialBannerContainer: View? = null
     private var trialBannerText: TextView? = null
+    private var helperTransferContainer: View? = null
+    private var helperTransferText: TextView? = null
+    private var helperTransferDismissButton: Button? = null
     private var nativeWirelessWarningContainer: View? = null
     private var nativeWirelessWarningText: TextView? = null
     private var nativeWirelessSwitchButton: Button? = null
@@ -110,6 +114,7 @@ class HomeFragment : Fragment() {
     private lateinit var appDrawerContent: View
     private lateinit var appDrawerChevron: ImageView
     private lateinit var appDrawerSearchInput: TextInputEditText
+    private lateinit var homeRoot: View
     private lateinit var homeAppsAdapter: HomeAppsAdapter
     private lateinit var appDrawerBehavior: BottomSheetBehavior<View>
     private var clockJob: Job? = null
@@ -134,6 +139,7 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        homeRoot = view.findViewById(R.id.home_root)
         self_mode_button = view.findViewById(R.id.self_mode_button)
         usb = view.findViewById(R.id.usb_button)
         settings = view.findViewById(R.id.settings_button)
@@ -146,6 +152,9 @@ class HomeFragment : Fragment() {
         crashReportClearButton = view.findViewById(R.id.crash_report_clear_button)
         trialBannerContainer = view.findViewById(R.id.trial_banner_container)
         trialBannerText = view.findViewById(R.id.trial_banner_text)
+        helperTransferContainer = view.findViewById(R.id.helper_transfer_container)
+        helperTransferText = view.findViewById(R.id.helper_transfer_text)
+        helperTransferDismissButton = view.findViewById(R.id.helper_transfer_dismiss_button)
         nativeWirelessWarningContainer = view.findViewById(R.id.native_wireless_warning_container)
         nativeWirelessWarningText = view.findViewById(R.id.native_wireless_warning_text)
         nativeWirelessSwitchButton = view.findViewById(R.id.native_wireless_switch_button)
@@ -164,6 +173,10 @@ class HomeFragment : Fragment() {
         appDrawerSearchInput = view.findViewById(R.id.app_drawer_search_input)
         homeAppsRecyclerView = view.findViewById(R.id.home_apps_recycler)
         homeAppsEmptyView = view.findViewById(R.id.home_apps_empty_text)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            appDrawerSearchInput.showSoftInputOnFocus = false
+        }
 
         homeAppsAdapter = HomeAppsAdapter { app ->
             try {
@@ -204,6 +217,7 @@ class HomeFragment : Fragment() {
         updateLauncherUi()
         updateCrashReportBanner()
         updateTrialBanner()
+        updateHelperTransferBanner()
         updateNativeWirelessWarning()
         loadHomeApps()
 
@@ -417,6 +431,11 @@ class HomeFragment : Fragment() {
     }
 
     private fun setupListeners() {
+        helperTransferDismissButton?.setOnClickListener {
+            App.provide(requireContext()).settings.helperTransferUrlDismissed = true
+            helperTransferContainer?.visibility = View.GONE
+        }
+
         exitButton.setOnClickListener {
             if (LauncherUtils.isDefaultHomeApp(requireContext())) {
                 val controller = findNavController()
@@ -569,6 +588,7 @@ class HomeFragment : Fragment() {
         updateLauncherUi()
         updateCrashReportBanner()
         updateTrialBanner()
+        updateHelperTransferBanner()
         loadHomeApps()
         updateDrawerUi(appDrawerBehavior.state == BottomSheetBehavior.STATE_EXPANDED)
         updateNativeWirelessWarning()
@@ -578,9 +598,11 @@ class HomeFragment : Fragment() {
 
     private fun hideKeyboard() {
         val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-        val targetView = view ?: requireActivity().currentFocus ?: return
+        val targetView = requireActivity().currentFocus ?: view ?: homeRoot
         imm?.hideSoftInputFromWindow(targetView.windowToken, 0)
-        targetView.clearFocus()
+        requireActivity().currentFocus?.clearFocus()
+        appDrawerSearchInput.clearFocus()
+        homeRoot.requestFocus()
     }
 
     private fun updateNativeWirelessWarning() {
@@ -622,6 +644,47 @@ class HomeFragment : Fragment() {
                 formatTrialRemaining(remainingMs)
             )
         }
+    }
+
+    private fun updateHelperTransferBanner() {
+        val appSettings = App.provide(requireContext()).settings
+        if (appSettings.wifiConnectionMode != 2 || appSettings.helperTransferUrlDismissed) {
+            helperTransferContainer?.visibility = View.GONE
+            return
+        }
+
+        val url = resolveHelperTransferUrl()
+        helperTransferContainer?.visibility = if (url == null) View.GONE else View.VISIBLE
+        helperTransferText?.text = if (url == null) {
+            ""
+        } else {
+            getString(R.string.helper_transfer_message, url)
+        }
+    }
+
+    private fun resolveHelperTransferUrl(): String? {
+        val wifiManager = requireContext().applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            ?: return null
+        @Suppress("DEPRECATION")
+        val connectionInfo = wifiManager.connectionInfo ?: return null
+        if (connectionInfo.networkId == -1) {
+            return null
+        }
+        @Suppress("DEPRECATION")
+        val gateway = wifiManager.dhcpInfo?.gateway ?: 0
+        if (gateway == 0) {
+            return null
+        }
+        return "http://${formatIpv4(gateway)}:8787/"
+    }
+
+    private fun formatIpv4(address: Int): String {
+        return listOf(
+            address and 0xff,
+            address shr 8 and 0xff,
+            address shr 16 and 0xff,
+            address shr 24 and 0xff
+        ).joinToString(".")
     }
 
     private fun formatTrialRemaining(remainingMs: Long): String {
@@ -876,11 +939,9 @@ class HomeFragment : Fragment() {
         appDrawerSheet.alpha = if (isExpanded) 1f else 0.82f
         updateDrawerBackground(isExpanded)
         appDrawerChevron.rotation = if (isExpanded) 180f else 0f
-        if (isExpanded) {
-            appDrawerSearchInput.requestFocus()
-        } else {
-            appDrawerSearchInput.clearFocus()
-        }
+        appDrawerSearchInput.clearFocus()
+        homeRoot.requestFocus()
+        hideKeyboard()
     }
 
     private fun updateDrawerBackground(isExpanded: Boolean) {
