@@ -19,14 +19,23 @@ class MainViewModel(application: Application): AndroidViewModel(application), Us
         get() = getApplication()
     private val settings = Settings(application)
     private val usbReceiver = UsbReceiver(this)
+    private var isRegistered = false
 
     fun register() {
+        if (isRegistered) {
+            usbDevices.value = createDeviceList(settings.allowedDevices)
+            return
+        }
         ContextCompat.registerReceiver(app, usbReceiver, UsbReceiver.createFilter(), ContextCompat.RECEIVER_NOT_EXPORTED)
+        isRegistered = true
         usbDevices.value = createDeviceList(settings.allowedDevices)
     }
 
     override fun onCleared() {
-        app.unregisterReceiver(usbReceiver)
+        if (isRegistered) {
+            app.unregisterReceiver(usbReceiver)
+            isRegistered = false
+        }
         super.onCleared()
     }
 

@@ -73,6 +73,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     private var isNightModeReceiverRegistered = false
     private var isFinishReceiverRegistered = false
     private var isKeyEventReceiverRegistered = false
+    private var disconnectFinishPosted = false
 
     private val videoWatchdogRunnable = object : Runnable {
         override fun run() {
@@ -276,31 +277,34 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                             !isForeground ||
                             LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)
                         if (shouldFinishImmediately) {
+                            CrashReportStore.markExpectedShutdown(
+                                this@AapProjectionActivity,
+                                "projection-disconnect clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                            )
+                            val delayMs = if (!state.isClean && !state.isUserExit) 350L else 0L
                             AppLog.i(
-                                "AapProjectionActivity: Finishing immediately because userExit=${state.isUserExit}, clean=${state.isClean}, foreground=$isForeground, defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                                "AapProjectionActivity: Scheduling disconnect finish in ${delayMs}ms because userExit=${state.isUserExit}, clean=${state.isClean}, foreground=$isForeground, defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
                             )
                             CrashReportStore.noteBreadcrumb(
                                 this@AapProjectionActivity,
-                                "Projection finish immediate clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground"
+                                "Projection finish scheduled clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground delayMs=$delayMs"
                             )
-                            CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-immediate")
-                            hideReconnectingOverlay()
-                            finish()
+                            CrashReportStore.updateState(
+                                this@AapProjectionActivity,
+                                "projection_finish_reason",
+                                if (delayMs > 0L) "disconnect-delay-short" else "disconnect-immediate"
+                            )
+                            scheduleDisconnectFinish(delayMs)
                         } else {
                             CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection finish delayed pending reconnect")
                             CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-delay")
-                            watchdogHandler.postDelayed({
-                                if (commManager.connectionState.value is CommManager.ConnectionState.Disconnected) {
-                                    AppLog.i("AapProjectionActivity: Finishing after delay due to Disconnected state.")
-                                    CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection finish delayed fired")
-                                    CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-delay-fired")
-                                    hideReconnectingOverlay()
-                                    finish()
-                                }
-                            }, 2000)
+                            scheduleDisconnectFinish(2000L)
                         }
                     }
                     is CommManager.ConnectionState.HandshakeComplete -> {
+                        disconnectFinishPosted = false
+                        watchdogHandler.removeCallbacks(disconnectFinishRunnable)
+                        CrashReportStore.clearExpectedShutdown(this@AapProjectionActivity, "projection-handshake")
                         clearRecentDisconnect()
                         CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection handshake complete; launch cooldown cleared")
                         CrashReportStore.updateState(this@AapProjectionActivity, "projection_launch_guard", autoLaunchGuardSummary())
@@ -316,6 +320,9 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                         }
                     }
                     is CommManager.ConnectionState.TransportStarted -> {
+                        disconnectFinishPosted = false
+                        watchdogHandler.removeCallbacks(disconnectFinishRunnable)
+                        CrashReportStore.clearExpectedShutdown(this@AapProjectionActivity, "projection-transport")
                         clearRecentDisconnect()
                         CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection transport started; launch cooldown cleared")
                         CrashReportStore.updateState(this@AapProjectionActivity, "projection_launch_guard", autoLaunchGuardSummary())
@@ -433,6 +440,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         watchdogHandler.removeCallbacks(watchdogRunnable)
         watchdogHandler.removeCallbacks(videoWatchdogRunnable)
         watchdogHandler.removeCallbacks(reconnectingWatchdog)
+        watchdogHandler.removeCallbacks(disconnectFinishRunnable)
         if (isOrientationReceiverRegistered) {
             unregisterReceiver(orientationReceiver)
             isOrientationReceiverRegistered = false
@@ -450,6 +458,8 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     override fun onResume() {
         super.onResume()
         isForeground = true
+        disconnectFinishPosted = false
+        watchdogHandler.removeCallbacks(disconnectFinishRunnable)
         AppLog.i("AapProjectionActivity: onResume")
         CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onResume guard=${autoLaunchGuardSummary()}")
         CrashReportStore.updateState(this, "projection_activity", "resumed")
@@ -489,7 +499,9 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
         if (!isChangingConfigurations &&
             !App.isPiPActive &&
-            commManager.connectionState.value is CommManager.ConnectionState.Disconnected
+            commManager.connectionState.value is CommManager.ConnectionState.Disconnected &&
+            !disconnectFinishPosted &&
+            !isFinishing
         ) {
             AppLog.i("AapProjectionActivity: onStop while disconnected, finishing stale projection activity")
             CrashReportStore.noteBreadcrumb(this, "Projection finish from onStop while disconnected")
@@ -956,6 +968,7 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     }
 
     override fun onDestroy() {
+        watchdogHandler.removeCallbacks(disconnectFinishRunnable)
         projectionView.removeCallback(this)
         super.onDestroy()
         CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onDestroy finishing=$isFinishing")
@@ -1024,6 +1037,30 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
             return aapIntent
         }
     }
+
+    private val disconnectFinishRunnable = Runnable {
+        disconnectFinishPosted = false
+        if (isFinishing) return@Runnable
+        if (commManager.connectionState.value is CommManager.ConnectionState.Disconnected) {
+            AppLog.i("AapProjectionActivity: Finishing after disconnect delay.")
+            CrashReportStore.noteBreadcrumb(this, "Projection finish delayed fired")
+            CrashReportStore.updateState(this, "projection_finish_reason", "disconnect-delay-fired")
+            hideReconnectingOverlay()
+            finish()
+        }
+    }
+
+    private fun scheduleDisconnectFinish(delayMs: Long) {
+        if (disconnectFinishPosted || isFinishing) return
+        disconnectFinishPosted = true
+        hideReconnectingOverlay()
+        if (delayMs <= 0L) {
+            disconnectFinishRunnable.run()
+        } else {
+            watchdogHandler.postDelayed(disconnectFinishRunnable, delayMs)
+        }
+    }
+
     private fun applyOrientationSettings() {
         val screenOrientation = settings.screenOrientation
         if (screenOrientation == Settings.ScreenOrientation.AUTO) {

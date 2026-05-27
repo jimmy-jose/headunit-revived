@@ -622,6 +622,7 @@ class AapService : Service(), UsbReceiver.Listener {
 
     override fun onCreate() {
         super.onCreate()
+        killProcessOnDestroy = false
         isRunning = true
         AppLog.i("AapService creating...")
         CrashReportStore.noteBreadcrumb(this, "AapService.onCreate")
@@ -926,6 +927,12 @@ class AapService : Service(), UsbReceiver.Listener {
             CrashReportStore.updateState(this, "projection_auto_launch", "AapService skipped-pip ${AapProjectionActivity.autoLaunchGuardSummary()}")
             return
         }
+        if (AapProjectionActivity.isForeground) {
+            AppLog.i("AapService: Skipping projection launch because projection is already foreground")
+            CrashReportStore.noteBreadcrumb(this, "AapService skipped projection launch already-foreground guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(this, "projection_auto_launch", "AapService skipped-foreground ${AapProjectionActivity.autoLaunchGuardSummary()}")
+            return
+        }
         if (AapProjectionActivity.shouldSuppressAutoLaunch()) {
             AppLog.i("AapService: Suppressing projection launch during recent pause/disconnect cooldown")
             CrashReportStore.noteBreadcrumb(this, "AapService suppressed projection launch guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
@@ -1073,6 +1080,7 @@ class AapService : Service(), UsbReceiver.Listener {
             }
             App.provide(this@AapService).audioDecoder.stop()
             App.provide(this@AapService).videoDecoder.stop("AapService::onDisconnect")
+            App.provide(this@AapService).videoDecoder.resetStreamState("AapService::onDisconnect")
             CrashReportStore.noteBreadcrumb(
                 this@AapService,
                 "AapService.onDisconnect clean=${state.isClean} userExit=${state.isUserExit}"
@@ -1572,8 +1580,8 @@ class AapService : Service(), UsbReceiver.Listener {
         LogExporter.stopCapture()
         super.onDestroy()
         if (killProcessOnDestroy) {
-            AppLog.i("AapService: killProcessOnDestroy is true. Triggering System.exit(0).")
-            System.exit(0)
+            AppLog.i("AapService: killProcessOnDestroy was requested, but process exit is suppressed for stability.")
+            killProcessOnDestroy = false
         }
     }
 
@@ -1583,13 +1591,31 @@ class AapService : Service(), UsbReceiver.Listener {
         // Handle stop before re-posting the foreground notification to avoid a flash
         if (intent?.action == ACTION_STOP_SERVICE) {
             AppLog.i("Stop action received. Broadcasting finish request to activities.")
+            CrashReportStore.markExpectedShutdown(this, "service-stop-action")
             sendBroadcast(Intent("org.xs.headunitlauncher.ACTION_FINISH_ACTIVITIES").apply {
                 setPackage(packageName)
             })
             isDestroying = true
-            if (commManager.isConnected) commManager.disconnect(sendByeBye = true)
-            stopForeground(true)
-            stopSelf()
+            val finishTasks = intent.getBooleanExtra(EXTRA_FINISH_TASKS, false)
+            serviceScope.launch(Dispatchers.IO) {
+                try {
+                    commManager.disconnectAndWait(sendByeBye = commManager.isConnected)
+                } catch (e: Exception) {
+                    AppLog.e("AapService: failed to finish disconnect before stop", e)
+                }
+                withContext(Dispatchers.Main) {
+                    if (finishTasks && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        try {
+                            val activityManager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                            activityManager.appTasks.forEach { it.finishAndRemoveTask() }
+                        } catch (e: Exception) {
+                            AppLog.e("AapService: failed to finish tasks during stop", e)
+                        }
+                    }
+                    stopForeground(true)
+                    stopSelf()
+                }
+            }
             return START_NOT_STICKY
         }
 
@@ -1712,6 +1738,7 @@ class AapService : Service(), UsbReceiver.Listener {
             }
             ACTION_DISCONNECT            -> {
                 AppLog.i("Disconnect action received.")
+                CrashReportStore.markExpectedShutdown(this, "service-disconnect-action")
                 if (commManager.isConnected) commManager.disconnect()
             }
             ACTION_CONNECT_SOCKET        -> {
@@ -2605,6 +2632,7 @@ class AapService : Service(), UsbReceiver.Listener {
         const val ACTION_NEARBY_CONNECT             = "org.xs.headunitlauncher.ACTION_NEARBY_CONNECT"
         const val ACTION_CHECK_USB                 = "org.xs.headunitlauncher.ACTION_CHECK_USB"
         const val ACTION_STOP_SERVICE              = "org.xs.headunitlauncher.ACTION_STOP_SERVICE"
+        const val EXTRA_FINISH_TASKS               = "org.xs.headunitlauncher.EXTRA_FINISH_TASKS"
         const val ACTION_DISCONNECT                = "org.xs.headunitlauncher.ACTION_DISCONNECT"
         const val ACTION_REQUEST_NIGHT_MODE_UPDATE = "org.xs.headunitlauncher.ACTION_REQUEST_NIGHT_MODE_UPDATE"
         const val ACTION_NIGHT_MODE_CHANGED      = "org.xs.headunitlauncher.ACTION_NIGHT_MODE_CHANGED"

@@ -52,6 +52,9 @@ object CrashReportStore {
     private const val KEY_HELPER_UPLOAD_TIME = "crash-helper-upload-time"
     private const val KEY_FOREGROUND_SESSION_ACTIVE = "crash-foreground-session-active"
     private const val KEY_FOREGROUND_SESSION_SINCE = "crash-foreground-session-since"
+    private const val KEY_EXPECTED_SHUTDOWN_ARMED = "crash-expected-shutdown-armed"
+    private const val KEY_EXPECTED_SHUTDOWN_AT = "crash-expected-shutdown-at"
+    private const val KEY_EXPECTED_SHUTDOWN_REASON = "crash-expected-shutdown-reason"
     private const val KEY_LAST_LAUNCH_UPDATE_TIME = "crash-last-launch-update-time"
     private const val KEY_LAST_LAUNCH_VERSION_CODE = "crash-last-launch-version-code"
     private const val PUBLIC_CRASH_DIR = "HUL"
@@ -60,6 +63,7 @@ object CrashReportStore {
     private const val MAX_STATE_ENTRIES = 32
     private const val MAX_THREAD_FRAMES = 20
     private const val MAX_THREAD_COUNT = 24
+    private const val EXPECTED_SHUTDOWN_TTL_MS = 2 * 60 * 1000L
 
     @Volatile
     private var isInstalled = false
@@ -146,6 +150,31 @@ object CrashReportStore {
 
     fun updateState(context: Context, key: String, value: String?) {
         persistStateValue(context.applicationContext, key, value)
+    }
+
+    fun markExpectedShutdown(context: Context, reason: String) {
+        val appContext = context.applicationContext
+        val now = System.currentTimeMillis()
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_EXPECTED_SHUTDOWN_ARMED, true)
+            .putLong(KEY_EXPECTED_SHUTDOWN_AT, now)
+            .putString(KEY_EXPECTED_SHUTDOWN_REASON, reason)
+            .commit()
+        appendBreadcrumb(appContext, "CrashReportStore.expectedShutdown armed reason=$reason")
+        persistStateValue(appContext, "expected_shutdown", "armed:$reason")
+    }
+
+    fun clearExpectedShutdown(context: Context, reason: String) {
+        val appContext = context.applicationContext
+        appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_EXPECTED_SHUTDOWN_ARMED)
+            .remove(KEY_EXPECTED_SHUTDOWN_AT)
+            .remove(KEY_EXPECTED_SHUTDOWN_REASON)
+            .commit()
+        appendBreadcrumb(appContext, "CrashReportStore.expectedShutdown cleared reason=$reason")
+        persistStateValue(appContext, "expected_shutdown", "cleared:$reason")
     }
 
     private fun clearPendingReport(context: Context) {
@@ -288,6 +317,19 @@ object CrashReportStore {
             return
         }
 
+        if (prefs.getBoolean(KEY_EXPECTED_SHUTDOWN_ARMED, false)) {
+            appendBreadcrumb(
+                context,
+                "Unexpected shutdown suppressed after expected shutdown reason=${prefs.getString(KEY_EXPECTED_SHUTDOWN_REASON, "<unknown>")}"
+            )
+            clearExpectedShutdown(context, "launch-suppressed")
+            prefs.edit()
+                .putBoolean(KEY_FOREGROUND_SESSION_ACTIVE, false)
+                .remove(KEY_FOREGROUND_SESSION_SINCE)
+                .commit()
+            return
+        }
+
         val previousUpdateTime = prefs.getLong(KEY_LAST_LAUNCH_UPDATE_TIME, -1L)
         val previousVersionCode = prefs.getLong(KEY_LAST_LAUNCH_VERSION_CODE, -1L)
         val isFirstInstall = previousUpdateTime == -1L || previousVersionCode == -1L
@@ -324,6 +366,7 @@ object CrashReportStore {
 
             override fun onActivityStarted(activity: Activity) {
                 startedActivityCount += 1
+                clearExpectedShutdownIfExpired(application)
                 if (startedActivityCount == 1) {
                     val now = System.currentTimeMillis()
                     application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -365,6 +408,15 @@ object CrashReportStore {
                 appendBreadcrumb(application, "${activity.localClassName}:onDestroy")
             }
         })
+    }
+
+    private fun clearExpectedShutdownIfExpired(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val armedAt = prefs.getLong(KEY_EXPECTED_SHUTDOWN_AT, 0L)
+        val isArmed = prefs.getBoolean(KEY_EXPECTED_SHUTDOWN_ARMED, false)
+        if (!isArmed || armedAt <= 0L) return
+        if (System.currentTimeMillis() - armedAt < EXPECTED_SHUTDOWN_TTL_MS) return
+        clearExpectedShutdown(context, "expired")
     }
 
     private fun registerComponentCallbacks(application: Application) {

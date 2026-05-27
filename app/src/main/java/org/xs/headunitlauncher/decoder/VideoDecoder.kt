@@ -119,18 +119,20 @@ class VideoDecoder(private val settings: Settings) {
      * Handles dynamic video dimension changes during the session.
      */
     private fun handleOutputFormatChange(format: MediaFormat) {
-        AppLog.i("Output Format Changed: $format")
-        val newWidth = try { format.getInteger(MediaFormat.KEY_WIDTH) } catch (e: Exception) { mWidth }
-        val newHeight = try { format.getInteger(MediaFormat.KEY_HEIGHT) } catch (e: Exception) { mHeight }
-        if (mWidth != newWidth || mHeight != newHeight) {
-            AppLog.i("Video dimensions changed via format: ${newWidth}x$newHeight")
-            mWidth = newWidth
-            mHeight = newHeight
-            dimensionsListener?.onVideoDimensionsChanged(mWidth, mHeight)
+        synchronized(this) {
+            AppLog.i("Output Format Changed: $format")
+            val newWidth = try { format.getInteger(MediaFormat.KEY_WIDTH) } catch (e: Exception) { mWidth }
+            val newHeight = try { format.getInteger(MediaFormat.KEY_HEIGHT) } catch (e: Exception) { mHeight }
+            if (mWidth != newWidth || mHeight != newHeight) {
+                AppLog.i("Video dimensions changed via format: ${newWidth}x${newHeight}")
+                mWidth = newWidth
+                mHeight = newHeight
+                dimensionsListener?.onVideoDimensionsChanged(mWidth, mHeight)
+            }
+            try {
+                codec?.setVideoScalingMode(MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT)
+            } catch (e: Exception) {}
         }
-        try {
-            codec?.setVideoScalingMode(MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT)
-        } catch (e: Exception) {}
     }
 
     /**
@@ -158,25 +160,32 @@ class VideoDecoder(private val settings: Settings) {
                 AppLog.i("Decoder stop skipped: already stopped ($reason)")
                 return
             }
+            val threadToJoin = outputThread
+            val codecToRelease = codec
             running = false
             try {
-                // If calling from output thread, don't join itself to avoid deadlock
-                if (outputThread != null && outputThread != Thread.currentThread()) {
-                    outputThread?.interrupt()
-                    outputThread?.join(500)
+                // Stop the codec before joining so blocked dequeueOutputBuffer() calls unwind
+                // on older vendor codecs instead of racing a release from another thread.
+                codecToRelease?.stop()
+            } catch (e: Exception) {
+                AppLog.w("Decoder stop() codec stop failed: ${e.message}")
+            }
+            try {
+                // If calling from output thread, don't join itself to avoid deadlock.
+                if (threadToJoin != null && threadToJoin != Thread.currentThread()) {
+                    threadToJoin.interrupt()
+                    threadToJoin.join(1500)
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                AppLog.w("Decoder stop() thread join failed: ${e.message}")
+            }
             outputThread = null
-            
             try {
-                codec?.stop()
-            } catch (e: Exception) {}
-            try {
-                codec?.release()
+                codecToRelease?.release()
             } catch (e: Exception) {
                 AppLog.e("Error releasing decoder", e)
             }
-            
+
             codec = null
             inputBuffers = null
             legacyFrameBuffer = null
@@ -185,6 +194,17 @@ class VideoDecoder(private val settings: Settings) {
             // Keep VPS/SPS/PPS cached so we can re-inject them on restart
             lastFrameRenderedMs = 0L
             AppLog.i("Decoder stopped: $reason")
+        }
+    }
+
+    /**
+     * Clears codec-specific stream metadata after a full disconnect so the next session
+     * cannot accidentally reuse VPS/SPS/PPS from an older transport.
+     */
+    fun resetStreamState(reason: String = "unknown") {
+        synchronized(this) {
+            clearCachedCodecConfig(resetDimensions = true)
+            AppLog.i("Decoder stream state reset: $reason")
         }
     }
 
@@ -213,9 +233,13 @@ class VideoDecoder(private val settings: Settings) {
             if (codec == null) {
                 val detectedType = detectCodecType(frameData, frameOffset, size)
                 val typeToUse = detectedType ?: if (codecName.contains("265")) CodecType.H265 else CodecType.H264
+                if (typeToUse != currentCodecType) {
+                    clearCachedCodecConfig(resetDimensions = true)
+                }
                 currentCodecType = typeToUse
+                val frameContainsConfig = isCodecConfigData(frameData, frameOffset, size)
 
-                if (!codecConfigured) {
+                if (frameContainsConfig || !codecConfigured) {
                     scanAndApplyConfig(frameData, frameOffset, size, typeToUse)
                     
                     if (mWidth == 0) {
@@ -440,7 +464,30 @@ class VideoDecoder(private val settings: Settings) {
             AppLog.i("Codec initialized: $bestCodec")
         } catch (e: Exception) {
             AppLog.e("Failed to start decoder", e)
-            codec = null; running = false
+            try {
+                codec?.release()
+            } catch (releaseError: Exception) {
+                AppLog.e("Failed to release decoder after start error", releaseError)
+            }
+            codec = null
+            codecBufferInfo = null
+            inputBuffers = null
+            outputThread = null
+            running = false
+            lastFrameRenderedMs = 0L
+            clearCachedCodecConfig(resetDimensions = true)
+        }
+    }
+
+    private fun clearCachedCodecConfig(resetDimensions: Boolean) {
+        vps = null
+        sps = null
+        pps = null
+        codecConfigured = false
+        currentCodecName = null
+        if (resetDimensions) {
+            mWidth = 0
+            mHeight = 0
         }
     }
 

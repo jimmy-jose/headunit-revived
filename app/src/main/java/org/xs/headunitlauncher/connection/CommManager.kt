@@ -308,7 +308,7 @@ class CommManager(
                         onAaMediaMetadata = { meta -> onAaMediaMetadata?.invoke(meta) },
                         onAaPlaybackStatus = { status -> onAaPlaybackStatus?.invoke(status) }
                     )
-                    _transport!!.onQuit = { isClean -> transportedQuited(isClean) }
+                    _transport!!.onQuit = { isClean, wasUserExit -> transportedQuited(isClean, wasUserExit) }
                     _transport!!.onAudioFocusStateChanged = { isPlaying -> onAudioFocusStateChanged?.invoke(isPlaying) }
                     _transport!!.onUpdateUiConfigReplyReceived = { onUpdateUiConfigReplyReceived?.invoke() }
                 }
@@ -365,24 +365,28 @@ class CommManager(
      * `false` immediately) then schedules cleanup. `sendByeBye` is `false` because the
      * connection is already dead — there is no point sending a `ByeByeRequest`.
      */
-    private fun transportedQuited(isClean: Boolean) {
-        val wasUserExit = _transport?.wasUserExit ?: false
-        _connectionState.value = ConnectionState.Disconnected(isClean, isUserExit = wasUserExit)
-        // Transport already quit on its own — no ByeByeRequest needed (connection is dead).
-        _disconnectJob = _scope.launch { doDisconnect(sendByeBye = false) }
+    private fun transportedQuited(isClean: Boolean, wasUserExit: Boolean) {
+        val current = _connectionState.value as? ConnectionState.Disconnected
+        val mergedState = ConnectionState.Disconnected(
+            isClean = current?.isClean == true || isClean,
+            isUserExit = current?.isUserExit == true || wasUserExit
+        )
+        if (current != mergedState) {
+            _connectionState.value = mergedState
+        }
+        // Manual disconnect already launched cleanup through disconnect()/disconnectAndWait().
+        // Avoid scheduling a second teardown pass that can race the in-flight one.
+        if (!wasUserExit) {
+            // Transport already quit on its own — no ByeByeRequest needed (connection is dead).
+            _disconnectJob = _scope.launch { doDisconnect(sendByeBye = false) }
+        }
         if (settings.killOnDisconnect) {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                // Stop the foreground service first to remove the notification
                 val stopIntent = android.content.Intent(context, org.xs.headunitlauncher.aap.AapService::class.java).apply {
                     action = org.xs.headunitlauncher.aap.AapService.ACTION_STOP_SERVICE
+                    putExtra(org.xs.headunitlauncher.aap.AapService.EXTRA_FINISH_TASKS, true)
                 }
-                org.xs.headunitlauncher.aap.AapService.killProcessOnDestroy = true
-                context.stopService(stopIntent)
-                // Finish all tasks (API 21+)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-                }
+                org.xs.headunitlauncher.aap.AapService.startInteractive(context, stopIntent)
             }, 500)
         }
     }
@@ -489,19 +493,23 @@ class CommManager(
         _disconnectJob = _scope.launch { doDisconnect(sendByeBye) }
         if (settings.killOnDisconnect) {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                // Stop the foreground service first to remove the notification
                 val stopIntent = android.content.Intent(context, org.xs.headunitlauncher.aap.AapService::class.java).apply {
                     action = org.xs.headunitlauncher.aap.AapService.ACTION_STOP_SERVICE
+                    putExtra(org.xs.headunitlauncher.aap.AapService.EXTRA_FINISH_TASKS, true)
                 }
-                org.xs.headunitlauncher.aap.AapService.killProcessOnDestroy = true
-                context.stopService(stopIntent)
-                // Finish all tasks (API 21+)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-                    activityManager.appTasks.forEach { it.finishAndRemoveTask() }
-                }
+                org.xs.headunitlauncher.aap.AapService.startInteractive(context, stopIntent)
             }, 500)
         }
+    }
+
+    suspend fun disconnectAndWait(sendByeBye: Boolean = true) = withContext(Dispatchers.IO) {
+        if (_connectionState.value !is ConnectionState.Disconnected) {
+            HeadUnitScreenConfig.unlockResolution()
+            _connectionState.value = ConnectionState.Disconnected(isUserExit = true)
+            _transport?.wasUserExit = true
+            _disconnectJob = _scope.launch { doDisconnect(sendByeBye) }
+        }
+        _disconnectJob?.join()
     }
 
     /**

@@ -63,13 +63,14 @@ class AapBroadcastReceiver : BroadcastReceiver() {
             }
         } else if (intent.action == ProjectionActivityRequest.action){
             if (component.commManager.connectionState.value is CommManager.ConnectionState.TransportStarted &&
+                !AapProjectionActivity.isForeground &&
                 !AapProjectionActivity.shouldSuppressAutoLaunch()
             ) {
                 CrashReportStore.noteBreadcrumb(context, "AapBroadcastReceiver launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
                 CrashReportStore.updateState(context, "projection_auto_launch", "BroadcastReceiver allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-                val aapIntent = Intent(context, AapProjectionActivity::class.java)
+                val aapIntent = AapProjectionActivity.intent(context)
                 aapIntent.putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
-                aapIntent.flags = FLAG_ACTIVITY_NEW_TASK
+                aapIntent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP or FLAG_ACTIVITY_NEW_TASK)
                 context.startActivity(aapIntent)
             } else if (component.commManager.connectionState.value is CommManager.ConnectionState.TransportStarted) {
                 CrashReportStore.noteBreadcrumb(context, "AapBroadcastReceiver suppressed projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")

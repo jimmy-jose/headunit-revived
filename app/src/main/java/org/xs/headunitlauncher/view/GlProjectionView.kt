@@ -61,8 +61,12 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
     }
 
     override fun onDetachedFromWindow() {
+        if (!renderer.isReleased()) {
+            queueEvent {
+                renderer.release()
+            }
+        }
         super.onDetachedFromWindow()
-        renderer.release()
     }
 
     private inner class VideoRenderer : Renderer, SurfaceTexture.OnFrameAvailableListener {
@@ -138,6 +142,8 @@ class GlProjectionView(context: Context) : GLSurfaceView(context), IProjectionVi
         private var desaturation = 0.0f
         @Volatile
         private var isReleased = false
+
+        fun isReleased(): Boolean = isReleased
 
         fun setDesaturation(value: Float) {
             desaturation = value.coerceIn(0f, 1f)

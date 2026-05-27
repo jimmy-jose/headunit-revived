@@ -107,7 +107,7 @@ class AapTransport(
     var ignoreNextStopRequest: Boolean = false
     /** Set by [AapControl] when VIDEO_FOCUS_NATIVE triggers a stop (user tapped Exit). */
     @Volatile var wasUserExit: Boolean = false
-    @Volatile var onQuit: ((Boolean) -> Unit)? = null
+    @Volatile var onQuit: ((Boolean, Boolean) -> Unit)? = null
     var onAudioFocusStateChanged: ((Boolean) -> Unit)? = null
     var onUpdateUiConfigReplyReceived: (() -> Unit)? = null
     private var pollHandler: Handler? = null
@@ -189,9 +189,9 @@ class AapTransport(
     internal fun quit(clean: Boolean = false) {
         val cb = onQuit ?: return
         onQuit = null
+        val userExit = wasUserExit
 
         AppLog.i("AapTransport quitting (clean=$clean)")
-        cb.invoke(clean)
         micRecorder.stop()
         micRecorder.listener = null
         pollThread?.quit()
@@ -212,6 +212,7 @@ class AapTransport(
         sendHandler = null
         pollThread = null
         sendThread = null
+        cb.invoke(clean, userExit)
     }
 
     /**
