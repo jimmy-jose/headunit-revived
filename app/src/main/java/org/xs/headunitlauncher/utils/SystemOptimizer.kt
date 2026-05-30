@@ -66,6 +66,15 @@ class SystemOptimizer(private val context: Context) {
 
         // 3. View Mode Recommendation
         val recViewMode = when {
+            ProjectionRendererPolicy.isSpreadtrumAndroid8(
+                sdkInt = Build.VERSION.SDK_INT,
+                manufacturer = Build.MANUFACTURER,
+                hardware = Build.HARDWARE,
+                board = Build.BOARD,
+                device = Build.DEVICE,
+                model = Build.MODEL
+            ) -> Settings.ViewMode.TEXTURE
+
             // Very old devices (Android 4.x) often have distortion issues with SurfaceView, 
             // so we recommend TextureView instead.
             Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP -> Settings.ViewMode.TEXTURE

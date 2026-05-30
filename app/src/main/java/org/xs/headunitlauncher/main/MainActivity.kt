@@ -110,29 +110,7 @@ class MainActivity : BaseActivity() {
 
         logLaunchSource()
 
-        // If an Android Auto session is active, bring the projection activity to front.
-        // Suppress this during the pause/disconnect cooldown window to avoid relaunching
-        // projection while the old activity/surface is still tearing down.
-        if (App.provide(this).commManager.isConnected &&
-            !App.isPiPActive &&
-            !AapProjectionActivity.shouldSuppressAutoLaunch()
-        ) {
-            AppLog.i("MainActivity: Active session detected in onCreate, bringing projection to front")
-            CrashReportStore.noteBreadcrumb(this, "MainActivity.onCreate launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onCreate allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-            val aapIntent = AapProjectionActivity.intent(this).apply {
-                putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
-                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
-            startActivity(aapIntent)
-        } else if (App.provide(this).commManager.isConnected &&
-            !App.isPiPActive &&
-            AapProjectionActivity.shouldSuppressAutoLaunch()
-        ) {
-            AppLog.i("MainActivity: Suppressing projection relaunch in onCreate due to recent pause/disconnect cooldown")
-            CrashReportStore.noteBreadcrumb(this, "MainActivity.onCreate suppressed projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onCreate suppressed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-        }
+        requestProjectionAutoLaunch("MainActivity.onCreate")
 
         val mainSettings = Settings(this)
         val isNightActive = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -421,29 +399,12 @@ class MainActivity : BaseActivity() {
             isOrientationReceiverRegistered = true
         }
 
-        // If an Android Auto session is active, bring the projection activity to front
-        if (App.provide(this).commManager.isConnected &&
-            !App.isPiPActive &&
-            !AapProjectionActivity.isForeground &&
-            !AapProjectionActivity.shouldSuppressAutoLaunch()
-        ) {
-            AppLog.i("MainActivity: Active session detected, bringing projection to front")
-            CrashReportStore.noteBreadcrumb(this, "MainActivity.onResume launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onResume allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-            val aapIntent = AapProjectionActivity.intent(this).apply {
-                putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
-                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            }
-            startActivity(aapIntent)
-        } else if (App.provide(this).commManager.isConnected &&
-            !App.isPiPActive &&
-            !AapProjectionActivity.isForeground &&
-            AapProjectionActivity.shouldSuppressAutoLaunch()
-        ) {
-            AppLog.i("MainActivity: Suppressing projection relaunch because AapProjectionActivity is in recent pause/disconnect cooldown")
-            CrashReportStore.noteBreadcrumb(this, "MainActivity.onResume suppressed projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "MainActivity.onResume suppressed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-        }
+        requestProjectionAutoLaunch("MainActivity.onResume")
+    }
+
+    private fun requestProjectionAutoLaunch(source: String) {
+        if (!App.provide(this).commManager.isConnected) return
+        AapProjectionActivity.launchOrDeferAutoLaunch(this, source)
     }
 
     override fun onPause() {

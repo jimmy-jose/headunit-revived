@@ -37,6 +37,8 @@ import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.IntentFilters
 import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.LauncherUtils
+import org.xs.headunitlauncher.utils.ProjectionLaunchGuardPolicy
+import org.xs.headunitlauncher.utils.ProjectionRendererPolicy
 import org.xs.headunitlauncher.view.IProjectionView
 import org.xs.headunitlauncher.view.GlProjectionView
 import org.xs.headunitlauncher.view.ProjectionView
@@ -339,32 +341,51 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
         val container = findViewById<android.widget.FrameLayout>(R.id.container)
         val displayMetrics = resources.displayMetrics
+        val rendererDecision = ProjectionRendererPolicy.resolve(
+            requested = settings.viewMode,
+            sdkInt = Build.VERSION.SDK_INT,
+            manufacturer = Build.MANUFACTURER,
+            hardware = Build.HARDWARE,
+            board = Build.BOARD,
+            device = Build.DEVICE,
+            model = Build.MODEL
+        )
+        val rendererState = rendererDecision.reason ?: rendererDecision.viewMode.name.lowercase()
+        CrashReportStore.updateState(this, "projection_renderer", rendererState)
+        if (rendererDecision.reason != null) {
+            AppLog.w("Projection renderer override: requested=${settings.viewMode}, using=${rendererDecision.viewMode}, reason=${rendererDecision.reason}")
+            CrashReportStore.noteBreadcrumb(this, "Projection renderer override=$rendererState requested=${settings.viewMode}")
+        }
 
-        if (settings.viewMode == Settings.ViewMode.TEXTURE) {
-            AppLog.i("Using TextureView")
-            val textureView = TextureProjectionView(this)
-            textureView.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            projectionView = textureView
-            container.setBackgroundColor(android.graphics.Color.BLACK)
-        } else if (settings.viewMode == Settings.ViewMode.GLES) {
-            AppLog.i("Using GlProjectionView")
-            val glView = org.xs.headunitlauncher.view.GlProjectionView(this)
-            glView.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            projectionView = glView
-            container.setBackgroundColor(Color.BLACK)
-        } else {
-            AppLog.i("Using SurfaceView")
-            projectionView = ProjectionView(this)
-            (projectionView as View).layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
+        when (rendererDecision.viewMode) {
+            Settings.ViewMode.TEXTURE -> {
+                AppLog.i("Using TextureView")
+                val textureView = TextureProjectionView(this)
+                textureView.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                projectionView = textureView
+                container.setBackgroundColor(android.graphics.Color.BLACK)
+            }
+            Settings.ViewMode.GLES -> {
+                AppLog.i("Using GlProjectionView")
+                val glView = org.xs.headunitlauncher.view.GlProjectionView(this)
+                glView.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                projectionView = glView
+                container.setBackgroundColor(Color.BLACK)
+            }
+            Settings.ViewMode.SURFACE -> {
+                AppLog.i("Using SurfaceView")
+                projectionView = ProjectionView(this)
+                (projectionView as View).layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+            }
         }
         // Use the same screen conf for both views for negotiation
         HeadUnitScreenConfig.init(this, displayMetrics, settings)
@@ -464,6 +485,13 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onResume guard=${autoLaunchGuardSummary()}")
         CrashReportStore.updateState(this, "projection_activity", "resumed")
         CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
+        when (commManager.connectionState.value) {
+            is CommManager.ConnectionState.HandshakeComplete ->
+                CrashReportStore.clearExpectedShutdown(this, "projection-resume-handshake")
+            is CommManager.ConnectionState.TransportStarted ->
+                CrashReportStore.clearExpectedShutdown(this, "projection-resume-transport")
+            else -> {}
+        }
         (projectionView as? GlProjectionView)?.onResume()
         applyStickyOrientation()
         watchdogHandler.postDelayed(watchdogRunnable, 2000)
@@ -991,12 +1019,17 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         @Volatile var isForeground = false
         @Volatile private var lastPauseElapsedRealtime = 0L
         @Volatile private var lastDisconnectElapsedRealtime = 0L
-        private const val RELAUNCH_COOLDOWN_MS = 2_000L
-        private const val DISCONNECT_RELAUNCH_COOLDOWN_MS = 6_000L
+        private val deferredAutoLaunchHandler by lazy {
+            android.os.Handler(android.os.Looper.getMainLooper())
+        }
+        @Volatile private var deferredAutoLaunchRunnable: Runnable? = null
 
         fun wasRecentlyPaused(): Boolean {
-            val lastPause = lastPauseElapsedRealtime
-            return lastPause > 0L && SystemClock.elapsedRealtime() - lastPause < RELAUNCH_COOLDOWN_MS
+            return ProjectionLaunchGuardPolicy.remainingCooldownMs(
+                nowElapsedMs = SystemClock.elapsedRealtime(),
+                lastPauseElapsedMs = lastPauseElapsedRealtime,
+                lastDisconnectElapsedMs = 0L
+            ) > 0L
         }
 
         fun noteDisconnect(isClean: Boolean, isUserExit: Boolean) {
@@ -1009,13 +1042,110 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         }
 
         fun wasRecentlyDisconnected(): Boolean {
-            val lastDisconnect = lastDisconnectElapsedRealtime
-            return lastDisconnect > 0L &&
-                SystemClock.elapsedRealtime() - lastDisconnect < DISCONNECT_RELAUNCH_COOLDOWN_MS
+            return ProjectionLaunchGuardPolicy.remainingCooldownMs(
+                nowElapsedMs = SystemClock.elapsedRealtime(),
+                lastPauseElapsedMs = 0L,
+                lastDisconnectElapsedMs = lastDisconnectElapsedRealtime
+            ) > 0L
         }
 
         fun shouldSuppressAutoLaunch(): Boolean {
-            return wasRecentlyPaused() || wasRecentlyDisconnected()
+            return autoLaunchCooldownRemainingMs() > 0L
+        }
+
+        fun autoLaunchCooldownRemainingMs(): Long {
+            return ProjectionLaunchGuardPolicy.remainingCooldownMs(
+                nowElapsedMs = SystemClock.elapsedRealtime(),
+                lastPauseElapsedMs = lastPauseElapsedRealtime,
+                lastDisconnectElapsedMs = lastDisconnectElapsedRealtime
+            )
+        }
+
+        fun launchOrDeferAutoLaunch(
+            context: Context,
+            source: String,
+            requireTransportStarted: Boolean = false
+        ): Boolean {
+            if (App.isPiPActive) {
+                CrashReportStore.noteBreadcrumb(context, "$source skipped projection launch PiP guard=${autoLaunchGuardSummary()}")
+                CrashReportStore.updateState(context, "projection_auto_launch", "$source skipped-pip ${autoLaunchGuardSummary()}")
+                return false
+            }
+            if (isForeground) {
+                CrashReportStore.noteBreadcrumb(context, "$source skipped projection launch already-foreground guard=${autoLaunchGuardSummary()}")
+                CrashReportStore.updateState(context, "projection_auto_launch", "$source skipped-foreground ${autoLaunchGuardSummary()}")
+                return false
+            }
+
+            val remainingMs = autoLaunchCooldownRemainingMs()
+            if (remainingMs > 0L) {
+                scheduleDeferredAutoLaunch(context, source, remainingMs, requireTransportStarted)
+                return false
+            }
+
+            return launchAutoProjectionNow(context, source, requireTransportStarted)
+        }
+
+        private fun launchAutoProjectionNow(
+            context: Context,
+            source: String,
+            requireTransportStarted: Boolean
+        ): Boolean {
+            val component = App.provide(context)
+            val state = component.commManager.connectionState.value
+            val hasLaunchableSession = if (requireTransportStarted) {
+                state is CommManager.ConnectionState.TransportStarted
+            } else {
+                component.commManager.isConnected
+            }
+            if (!hasLaunchableSession || App.isPiPActive || isForeground) return false
+            if (shouldSuppressAutoLaunch()) {
+                scheduleDeferredAutoLaunch(context, source, autoLaunchCooldownRemainingMs(), requireTransportStarted)
+                return false
+            }
+
+            cancelDeferredAutoLaunch()
+            CrashReportStore.noteBreadcrumb(context, "$source launching projection guard=${autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(context, "projection_auto_launch", "$source allowed ${autoLaunchGuardSummary()}")
+            context.startActivity(intent(context).apply {
+                putExtra(EXTRA_FOCUS, true)
+                addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            })
+            return true
+        }
+
+        private fun scheduleDeferredAutoLaunch(
+            context: Context,
+            source: String,
+            remainingMs: Long,
+            requireTransportStarted: Boolean
+        ) {
+            val appContext = context.applicationContext
+            val delayMs = remainingMs + 75L
+            synchronized(this) {
+                deferredAutoLaunchRunnable?.let { deferredAutoLaunchHandler.removeCallbacks(it) }
+                val holder = arrayOfNulls<Runnable>(1)
+                val runnable = Runnable {
+                    synchronized(this) {
+                        if (deferredAutoLaunchRunnable === holder[0]) {
+                            deferredAutoLaunchRunnable = null
+                        }
+                    }
+                    launchOrDeferAutoLaunch(appContext, "$source deferred", requireTransportStarted)
+                }
+                holder[0] = runnable
+                deferredAutoLaunchRunnable = runnable
+                deferredAutoLaunchHandler.postDelayed(runnable, delayMs)
+            }
+            CrashReportStore.noteBreadcrumb(context, "$source deferred projection launch ${delayMs}ms guard=${autoLaunchGuardSummary()}")
+            CrashReportStore.updateState(context, "projection_auto_launch", "$source deferred ${delayMs}ms ${autoLaunchGuardSummary()}")
+        }
+
+        private fun cancelDeferredAutoLaunch() {
+            synchronized(this) {
+                deferredAutoLaunchRunnable?.let { deferredAutoLaunchHandler.removeCallbacks(it) }
+                deferredAutoLaunchRunnable = null
+            }
         }
 
         fun autoLaunchGuardSummary(): String {

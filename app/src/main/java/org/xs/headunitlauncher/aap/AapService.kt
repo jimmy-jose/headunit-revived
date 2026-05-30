@@ -49,6 +49,7 @@ import org.xs.headunitlauncher.connection.UsbAccessoryMode
 import org.xs.headunitlauncher.connection.UsbDeviceCompat
 import org.xs.headunitlauncher.connection.UsbReceiver
 import org.xs.headunitlauncher.location.GpsLocationService
+import org.xs.headunitlauncher.utils.AapTaskRemovalPolicy
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.LocaleHelper
@@ -502,6 +503,7 @@ class AapService : Service(), UsbReceiver.Listener {
                 }
                 Intent.ACTION_SHUTDOWN -> {
                     AppLog.i("WakeDetect: SHUTDOWN (system shutting down, not hibernating)")
+                    CrashReportStore.markExpectedShutdown(this@AapService, "system-shutdown")
                 }
                 else -> {
                     // OEM boot/ACC/wake intents — log with extras for diagnostics
@@ -921,30 +923,7 @@ class AapService : Service(), UsbReceiver.Listener {
     }
 
     private fun launchAapProjectionActivity() {
-        if (App.isPiPActive) {
-            AppLog.i("AapService: Skipping projection launch because PiP is active")
-            CrashReportStore.noteBreadcrumb(this, "AapService projection launch skipped PiP guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "AapService skipped-pip ${AapProjectionActivity.autoLaunchGuardSummary()}")
-            return
-        }
-        if (AapProjectionActivity.isForeground) {
-            AppLog.i("AapService: Skipping projection launch because projection is already foreground")
-            CrashReportStore.noteBreadcrumb(this, "AapService skipped projection launch already-foreground guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "AapService skipped-foreground ${AapProjectionActivity.autoLaunchGuardSummary()}")
-            return
-        }
-        if (AapProjectionActivity.shouldSuppressAutoLaunch()) {
-            AppLog.i("AapService: Suppressing projection launch during recent pause/disconnect cooldown")
-            CrashReportStore.noteBreadcrumb(this, "AapService suppressed projection launch guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-            CrashReportStore.updateState(this, "projection_auto_launch", "AapService suppressed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-            return
-        }
-        CrashReportStore.noteBreadcrumb(this, "AapService launching projection guard=${AapProjectionActivity.autoLaunchGuardSummary()}")
-        CrashReportStore.updateState(this, "projection_auto_launch", "AapService allowed ${AapProjectionActivity.autoLaunchGuardSummary()}")
-        startActivity(AapProjectionActivity.intent(this).apply {
-            putExtra(AapProjectionActivity.EXTRA_FOCUS, true)
-            addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
-        })
+        AapProjectionActivity.launchOrDeferAutoLaunch(this, "AapService")
     }
 
     private fun setupMediaSession() {
@@ -1499,22 +1478,33 @@ class AapService : Service(), UsbReceiver.Listener {
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val defaultHome = LauncherUtils.isDefaultHomeApp(this)
-        val shouldRestart = !isDestroying && !defaultHome && (commManager.isConnected || selfMode)
-        AppLog.i(
-            "AapService: onTaskRemoved — defaultHome=$defaultHome, connected=${commManager.isConnected}, selfMode=$selfMode, isDestroying=$isDestroying, shouldRestart=$shouldRestart"
+        val state = commManager.connectionState.value
+        val hasActiveSession = AapTaskRemovalPolicy.hasActiveSession(
+            connectionStateActive = state !is CommManager.ConnectionState.Disconnected,
+            selfMode = selfMode
         )
-        CrashReportStore.noteBreadcrumb(this, "AapService.onTaskRemoved restart=$shouldRestart defaultHome=$defaultHome connected=${commManager.isConnected}")
-        CrashReportStore.updateState(this, "aap_task_removed", "restart=$shouldRestart")
+        val shouldRestart = AapTaskRemovalPolicy.shouldRestartServiceOnTaskRemoved(
+            isDestroying = isDestroying,
+            isDefaultHome = defaultHome,
+            hasActiveSession = hasActiveSession
+        )
+        AppLog.i(
+            "AapService: onTaskRemoved — defaultHome=$defaultHome, state=${state::class.java.simpleName}, connected=${commManager.isConnected}, selfMode=$selfMode, isDestroying=$isDestroying, shouldRestart=$shouldRestart"
+        )
+        CrashReportStore.noteBreadcrumb(this, "AapService.onTaskRemoved restart=$shouldRestart defaultHome=$defaultHome active=$hasActiveSession connected=${commManager.isConnected}")
+        CrashReportStore.updateState(this, "aap_task_removed", "restart=$shouldRestart,defaultHome=$defaultHome,active=$hasActiveSession")
         if (!shouldRestart) {
             super.onTaskRemoved(rootIntent)
             return
         }
+        CrashReportStore.markExpectedShutdown(this, "task-removed-restart defaultHome=$defaultHome connected=${commManager.isConnected}")
         try {
             val restartIntent = Intent(this, AapService::class.java)
             ContextCompat.startForegroundService(this, restartIntent)
         } catch (e: Exception) {
             AppLog.e("AapService: failed to restart after task removal: ${e.message}")
         }
+        AapProjectionActivity.launchOrDeferAutoLaunch(this, "AapService.onTaskRemoved")
         super.onTaskRemoved(rootIntent)
     }
 
