@@ -15,6 +15,7 @@ import org.xs.headunitlauncher.ssl.ConscryptInitializer
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.AppThemeManager
 import org.xs.headunitlauncher.utils.CrashReportStore
+import org.xs.headunitlauncher.utils.ProcessDeathWatchdog
 import org.xs.headunitlauncher.utils.Settings
 import android.os.SystemClock
 import java.io.File
@@ -103,6 +104,9 @@ class App : Application() {
 
         // Register the main broadcast receiver safely for Android 14+ using ContextCompat
         ContextCompat.registerReceiver(this, AapBroadcastReceiver(), AapBroadcastReceiver.filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+
+        // Start process death watchdog to detect native crashes
+        ProcessDeathWatchdog.start(this)
     }
 
     private fun isUserUnlocked(): Boolean {

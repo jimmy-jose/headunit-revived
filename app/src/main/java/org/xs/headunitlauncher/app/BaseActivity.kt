@@ -35,7 +35,7 @@ open class BaseActivity : AppCompatActivity() {
 
         val appliedVersion = AppThemeManager.themeVersion.value
         AppThemeManager.themeVersion.observe(this) { version ->
-            if (version != appliedVersion) {
+            if (version != appliedVersion && !isDefaultHome()) {
                 recreate()
             }
         }
@@ -50,7 +50,28 @@ open class BaseActivity : AppCompatActivity() {
             currentNightMode != actualNightMode ||
             currentUseGradientBackground != settings.useGradientBackground ||
             currentUseExtremeDarkMode != settings.useExtremeDarkMode) {
-            recreate()
+            // When acting as the default home/launcher, avoid recreate() to prevent
+            // memory pressure spikes that cause the system LMK to kill the process
+            // on low-end devices. Instead, just update the tracked state so we don't
+            // enter an infinite recreate loop next time.
+            if (isDefaultHome()) {
+                currentLanguage = settings.appLanguage
+                currentAppTheme = settings.appTheme
+                currentNightMode = actualNightMode
+                currentUseGradientBackground = settings.useGradientBackground
+                currentUseExtremeDarkMode = settings.useExtremeDarkMode
+            } else {
+                recreate()
+            }
         }
     }
+
+    private fun isDefaultHome(): Boolean {
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+            addCategory(android.content.Intent.CATEGORY_HOME)
+        }
+        val resolveInfo = packageManager.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName == packageName
+    }
 }
+

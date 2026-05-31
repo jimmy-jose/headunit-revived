@@ -23,7 +23,7 @@ object LauncherUtils {
     data class LaunchableApp(
         val label: String,
         val componentName: ComponentName,
-        val icon: Drawable
+        val icon: Drawable? = null
     )
 
     fun isDefaultHomeApp(context: Context): Boolean {

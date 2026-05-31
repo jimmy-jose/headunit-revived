@@ -36,6 +36,7 @@ import org.xs.headunitlauncher.decoder.VideoDimensionsListener
 import org.xs.headunitlauncher.utils.AppLog
 import org.xs.headunitlauncher.utils.IntentFilters
 import org.xs.headunitlauncher.utils.CrashReportStore
+import org.xs.headunitlauncher.utils.ProcessDeathWatchdog
 import org.xs.headunitlauncher.utils.LauncherUtils
 import org.xs.headunitlauncher.utils.ProjectionLaunchGuardPolicy
 import org.xs.headunitlauncher.utils.ProjectionRendererPolicy
@@ -273,19 +274,19 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                                 Toast.makeText(this@AapProjectionActivity, getString(R.string.wifi_disconnect_toast), Toast.LENGTH_LONG).show()
                             }
                         }
+                        val isDefaultHome = LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)
                         val shouldFinishImmediately =
                             state.isUserExit ||
                             state.isClean ||
-                            !isForeground ||
-                            LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)
+                            !isForeground
                         if (shouldFinishImmediately) {
                             CrashReportStore.markExpectedShutdown(
                                 this@AapProjectionActivity,
-                                "projection-disconnect clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                                "projection-disconnect clean=${state.isClean} userExit=${state.isUserExit} foreground=$isForeground defaultHome=$isDefaultHome"
                             )
                             val delayMs = if (!state.isClean && !state.isUserExit) 350L else 0L
                             AppLog.i(
-                                "AapProjectionActivity: Scheduling disconnect finish in ${delayMs}ms because userExit=${state.isUserExit}, clean=${state.isClean}, foreground=$isForeground, defaultHome=${LauncherUtils.isDefaultHomeApp(this@AapProjectionActivity)}"
+                                "AapProjectionActivity: Scheduling disconnect finish in ${delayMs}ms because userExit=${state.isUserExit}, clean=${state.isClean}, foreground=$isForeground, defaultHome=$isDefaultHome"
                             )
                             CrashReportStore.noteBreadcrumb(
                                 this@AapProjectionActivity,
@@ -300,7 +301,13 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
                         } else {
                             CrashReportStore.noteBreadcrumb(this@AapProjectionActivity, "Projection finish delayed pending reconnect")
                             CrashReportStore.updateState(this@AapProjectionActivity, "projection_finish_reason", "disconnect-delay")
-                            scheduleDisconnectFinish(2000L)
+                            // Wait longer than the reconnect schedule (2s) so native decoders
+                            // have time to fully stop before the surface is destroyed.
+                            // On launcher (default-home) devices, finishing too early causes a
+                            // native crash because the system immediately relaunches the process
+                            // while the old surface/GL context is still being torn down.
+                            val reconnectGrace = if (isDefaultHome) 4000L else 2000L
+                            scheduleDisconnectFinish(reconnectGrace)
                         }
                     }
                     is CommManager.ConnectionState.HandshakeComplete -> {
@@ -453,7 +460,10 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
         isForeground = false
         lastPauseElapsedRealtime = SystemClock.elapsedRealtime()
         AppLog.i("AapProjectionActivity: onPause")
+        AppLog.i("[CRASH_DEBUG] onPause: decoder.running=${videoDecoder.isRunning}, surface=${videoDecoder.hasSurface}, connected=${commManager.isConnected}")
         CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onPause guard=${autoLaunchGuardSummary()}")
+        CrashReportStore.noteBreadcrumb(this, "onPause decoder=${videoDecoder.isRunning} surface=${videoDecoder.hasSurface} connected=${commManager.isConnected}")
+        ProcessDeathWatchdog.noteActivityState("projection-paused connected=${commManager.isConnected} decoder=${videoDecoder.isRunning}")
         CrashReportStore.updateState(this, "projection_activity", "paused")
         CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
         (projectionView as? GlProjectionView)?.onPause()
@@ -522,7 +532,9 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onStop() {
         super.onStop()
+        AppLog.i("[CRASH_DEBUG] AapProjectionActivity.onStop: decoder.running=${videoDecoder.isRunning}, surface=${videoDecoder.hasSurface}, connected=${commManager.isConnected}, isFinishing=$isFinishing")
         CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onStop connected=${commManager.isConnected} guard=${autoLaunchGuardSummary()}")
+        ProcessDeathWatchdog.noteActivityState("projection-stopped connected=${commManager.isConnected} finishing=$isFinishing decoder=${videoDecoder.isRunning}")
         CrashReportStore.updateState(this, "projection_activity", "stopped")
         CrashReportStore.updateState(this, "projection_launch_guard", autoLaunchGuardSummary())
         if (!isChangingConfigurations &&
@@ -854,7 +866,9 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
 
     override fun onSurfaceDestroyed(surface: android.view.Surface) {
         AppLog.i("SurfaceCallback: onSurfaceDestroyed. Surface: $surface")
-        CrashReportStore.noteBreadcrumb(this, "Projection surface destroyed id=${System.identityHashCode(surface)} state=${commManager.connectionState.value::class.java.simpleName}")
+        AppLog.i("[CRASH_DEBUG] onSurfaceDestroyed: decoder.running=${videoDecoder.isRunning}, connected=${commManager.isConnected}, isFinishing=$isFinishing")
+        CrashReportStore.noteBreadcrumb(this, "Projection surface destroyed id=${System.identityHashCode(surface)} state=${commManager.connectionState.value::class.java.simpleName} decoder=${videoDecoder.isRunning}")
+        ProcessDeathWatchdog.noteActivityState("surface-destroyed decoder=${videoDecoder.isRunning} finishing=$isFinishing")
         CrashReportStore.updateState(this, "projection_surface", "destroyed")
         isSurfaceSet = false
         lastSurfaceIdentity = 0
@@ -996,8 +1010,16 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
     }
 
     override fun onDestroy() {
+        AppLog.i("[CRASH_DEBUG] onDestroy START: decoder.running=${videoDecoder.isRunning}, surface=${videoDecoder.hasSurface}, isFinishing=$isFinishing")
+        CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onDestroy START decoder=${videoDecoder.isRunning} surface=${videoDecoder.hasSurface} finishing=$isFinishing")
+        ProcessDeathWatchdog.noteActivityState("projection-destroying decoder=${videoDecoder.isRunning}")
         watchdogHandler.removeCallbacks(disconnectFinishRunnable)
         projectionView.removeCallback(this)
+        // Ensure video decoder releases the surface before the view hierarchy is torn down.
+        // This prevents native crashes when the surface is destroyed while the decoder
+        // still holds a reference (race between activity teardown and decoder thread).
+        videoDecoder.setSurface(null)
+        AppLog.i("[CRASH_DEBUG] onDestroy post-setSurface(null): decoder.running=${videoDecoder.isRunning}")
         super.onDestroy()
         CrashReportStore.noteBreadcrumb(this, "AapProjectionActivity.onDestroy finishing=$isFinishing")
         CrashReportStore.updateState(this, "projection_activity", "destroyed")
@@ -1175,6 +1197,16 @@ class AapProjectionActivity : SurfaceActivity(), IProjectionView.Callbacks, Vide
             AppLog.i("AapProjectionActivity: Finishing after disconnect delay.")
             CrashReportStore.noteBreadcrumb(this, "Projection finish delayed fired")
             CrashReportStore.updateState(this, "projection_finish_reason", "disconnect-delay-fired")
+            // Log decoder and surface state before finishing to help diagnose native crashes
+            AppLog.i("[CRASH_DEBUG] Pre-finish: decoder.running=${videoDecoder.isRunning}, surface=${videoDecoder.hasSurface}, lastFrame=${videoDecoder.lastFrameRenderedMs}")
+            CrashReportStore.noteBreadcrumb(this, "Pre-finish decoder running=${videoDecoder.isRunning} surface=${videoDecoder.hasSurface} lastFrame=${videoDecoder.lastFrameRenderedMs}")
+            // Detach the surface from the video decoder BEFORE finishing to prevent
+            // native crashes when the surface is destroyed during activity teardown
+            // while the decoder still holds a reference to it.
+            videoDecoder.setSurface(null)
+            AppLog.i("[CRASH_DEBUG] Post-setSurface(null): decoder.running=${videoDecoder.isRunning}")
+            CrashReportStore.noteBreadcrumb(this, "Post-setSurface(null) decoder running=${videoDecoder.isRunning}")
+            ProcessDeathWatchdog.noteActivityState("projection-finishing-disconnect")
             hideReconnectingOverlay()
             finish()
         }

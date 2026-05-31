@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
@@ -1004,14 +1005,20 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadHomeApps() {
-        val apps = LauncherUtils.queryLaunchableApps(requireContext())
-        AppLog.i(
-            "HomeFragment: loadHomeApps found %d apps%s",
-            apps.size,
-            if (apps.isEmpty()) "" else " first=${apps.take(5).joinToString { it.label }}"
-        )
-        homeAppsAdapter.setApps(apps)
-        updateHomeAppsEmptyState()
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val apps = LauncherUtils.queryLaunchableApps(requireContext())
+            AppLog.i(
+                "HomeFragment: loadHomeApps found %d apps%s",
+                apps.size,
+                if (apps.isEmpty()) "" else " first=${apps.take(5).joinToString { it.label }}"
+            )
+            withContext(Dispatchers.Main) {
+                if (isAdded) {
+                    homeAppsAdapter.setApps(apps)
+                    updateHomeAppsEmptyState()
+                }
+            }
+        }
     }
 
     private fun toggleAppDrawer() {
@@ -1081,7 +1088,7 @@ class HomeFragment : Fragment() {
     private data class HomeAppItem(
         val label: String,
         val componentName: android.content.ComponentName,
-        val icon: Drawable
+        val icon: Drawable?
     )
 
     private class HomeAppViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -1102,7 +1109,12 @@ class HomeFragment : Fragment() {
 
         override fun onBindViewHolder(holder: HomeAppViewHolder, position: Int) {
             val app = visibleApps[position]
-            holder.icon.setImageDrawable(app.icon)
+            val icon = app.icon ?: try {
+                holder.itemView.context.packageManager.getApplicationIcon(app.componentName.packageName)
+            } catch (_: Exception) {
+                null
+            }
+            holder.icon.setImageDrawable(icon)
             holder.label.text = app.label
             holder.itemView.setOnClickListener { onLaunch(app) }
         }

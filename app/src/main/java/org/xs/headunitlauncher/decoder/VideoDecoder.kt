@@ -86,7 +86,12 @@ class VideoDecoder(private val settings: Settings) {
     private var outputThread: Thread? = null
     @Volatile private var running = false
     private var startTime = 0L
-    
+
+    /** Whether the decoder output thread is currently running. */
+    val isRunning: Boolean get() = running
+    /** Whether a surface is currently attached. */
+    val hasSurface: Boolean get() = mSurface != null
+
     private var mWidth = 0
     private var mHeight = 0
     private var vps: ByteArray? = null
@@ -142,7 +147,7 @@ class VideoDecoder(private val settings: Settings) {
         synchronized(this) {
             if (mSurface === surface) return
             
-            AppLog.i("New surface set: $surface")
+            AppLog.i("[CRASH_DEBUG] VideoDecoder.setSurface: old=${mSurface} new=$surface running=$running codec=${codec != null} thread=${Thread.currentThread().name}")
             if (codec != null) {
                 stop(if (surface == null) "Surface cleared" else "New surface")
             }
@@ -160,6 +165,7 @@ class VideoDecoder(private val settings: Settings) {
                 AppLog.i("Decoder stop skipped: already stopped ($reason)")
                 return
             }
+            AppLog.i("[CRASH_DEBUG] VideoDecoder.stop($reason): running=$running codec=${codec != null} thread=${outputThread?.name} callerThread=${Thread.currentThread().name}")
             val threadToJoin = outputThread
             val codecToRelease = codec
             running = false
@@ -185,6 +191,7 @@ class VideoDecoder(private val settings: Settings) {
             } catch (e: Exception) {
                 AppLog.e("Error releasing decoder", e)
             }
+            AppLog.i("[CRASH_DEBUG] VideoDecoder.stop($reason): codec released successfully")
 
             codec = null
             inputBuffers = null

@@ -115,6 +115,7 @@
             android:configChanges="keyboardHidden|uiMode"
             android:launchMode="singleTask"
             android:screenOrientation="sensor"
+            android:stateNotNeeded="true"
             android:theme="@style/SplashTheme"
             android:exported="true">
 

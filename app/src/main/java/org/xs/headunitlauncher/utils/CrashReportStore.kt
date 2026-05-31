@@ -140,6 +140,29 @@ object CrashReportStore {
         clearPendingReport(context)
     }
 
+    /**
+     * Called by [ProcessDeathWatchdog] to create a shareable crash report when it detects
+     * a process death that the normal foreground-session tracking missed.
+     */
+    fun persistWatchdogReport(context: Context, contents: String, summary: String) {
+        val reportDir = context.getExternalFilesDir(null) ?: context.filesDir
+        if (!reportDir.exists()) reportDir.mkdirs()
+
+        val timestamp = System.currentTimeMillis()
+        val reportFile = reportFile(reportDir)
+        appendReportEntry(reportFile, contents)
+        exportPublicCopy(context, reportFile.name, reportFile.readText())
+
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_PENDING_CRASH_PATH, reportFile.absolutePath)
+            .putLong(KEY_PENDING_CRASH_TIME, timestamp)
+            .putString(KEY_PENDING_CRASH_SUMMARY, summary)
+            .putLong(KEY_PENDING_CRASH_UPDATE_TIME, readLaunchMetadata(context).lastUpdateTime)
+            .commit()
+        mirrorPendingReportToHelperAsync(context)
+    }
+
     fun formatTimestamp(timestamp: Long): String {
         return SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
     }
@@ -630,6 +653,26 @@ object CrashReportStore {
             appendLine("Notes:")
             appendLine("This usually means a native crash, watchdog kill, system restart, or another abrupt process death that bypassed the Java uncaught exception handler.")
             appendLine()
+i
+            // Include watchdog death info
+            val watchdogInfo = ProcessDeathWatchdog.getPreviousDeathInfo(context)
+            if (watchdogInfo != null) {
+                appendLine("Watchdog info:")
+                appendLine(watchdogInfo)
+                appendLine()
+            }
+
+            // Include watchdog death log file if present
+            val watchdogLog = try {
+                val f = File(context.filesDir, "watchdog_deaths.log")
+                if (f.exists()) f.readText().take(2000) else null
+            } catch (_: Exception) { null }
+            if (!watchdogLog.isNullOrBlank()) {
+                appendLine("Watchdog death history:")
+                appendLine(watchdogLog.trimEnd())
+                appendLine()
+            }
+
             appendLine("Memory snapshot:")
             appendLine(buildMemorySnapshot(context))
             appendLine()

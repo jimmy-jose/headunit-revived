@@ -1039,7 +1039,17 @@ class AapService : Service(), UsbReceiver.Listener {
         updateMediaSessionState(false)
         serviceScope.launch(Dispatchers.IO) {
             nearbyManager?.stop() // Disconnect Nearby tunnel
-            
+            AppLog.i("[CRASH_DEBUG] AapService disconnect IO: stopping audio decoder...")
+            App.provide(this@AapService).audioDecoder.stop()
+            AppLog.i("[CRASH_DEBUG] AapService disconnect IO: stopping video decoder...")
+            App.provide(this@AapService).videoDecoder.stop("AapService::onDisconnect")
+            App.provide(this@AapService).videoDecoder.resetStreamState("AapService::onDisconnect")
+            AppLog.i("[CRASH_DEBUG] AapService disconnect IO: decoders stopped. decoder.running=${App.provide(this@AapService).videoDecoder.isRunning}")
+            CrashReportStore.noteBreadcrumb(
+                this@AapService,
+                "AapService.onDisconnect decoders stopped clean=${state.isClean} userExit=${state.isUserExit}"
+            )
+
             val settings = App.provide(this@AapService).settings
             if (settings.wifiConnectionMode == 3) {
                 if (state.isUserExit) {
@@ -1057,13 +1067,6 @@ class AapService : Service(), UsbReceiver.Listener {
                     }
                 }
             }
-            App.provide(this@AapService).audioDecoder.stop()
-            App.provide(this@AapService).videoDecoder.stop("AapService::onDisconnect")
-            App.provide(this@AapService).videoDecoder.resetStreamState("AapService::onDisconnect")
-            CrashReportStore.noteBreadcrumb(
-                this@AapService,
-                "AapService.onDisconnect clean=${state.isClean} userExit=${state.isUserExit}"
-            )
             CrashReportStore.updateState(
                 this@AapService,
                 "aap_disconnect",

@@ -33,6 +33,7 @@ import androidx.navigation.fragment.NavHostFragment
 import org.xs.headunitlauncher.utils.Settings
 import org.xs.headunitlauncher.utils.LauncherUtils
 import org.xs.headunitlauncher.utils.CrashReportStore
+import org.xs.headunitlauncher.utils.ProcessDeathWatchdog
 import org.xs.headunitlauncher.utils.SetupWizard
 import org.xs.headunitlauncher.utils.SystemUI
 import kotlinx.coroutines.Dispatchers
@@ -104,14 +105,9 @@ class MainActivity : BaseActivity() {
         setTheme(R.style.AppTheme)
         super.onCreate(savedInstanceState)
 
-        if (redirectToBillingGateIfNeeded(skipPassedIntent = false)) {
-            return
-        }
-
-        logLaunchSource()
-
-        requestProjectionAutoLaunch("MainActivity.onCreate")
-
+        // Set content view FIRST so the window is drawn immediately.
+        // On launcher apps, Android falls back to the stock launcher if the preferred
+        // home app doesn't produce a visible window fast enough after process restart.
         val mainSettings = Settings(this)
         val isNightActive = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (mainSettings.appTheme == Settings.AppTheme.EXTREME_DARK ||
@@ -120,24 +116,16 @@ class MainActivity : BaseActivity() {
         } else if (mainSettings.useGradientBackground) {
             theme.applyStyle(R.style.ThemeOverlay_GradientBackground, true)
         }
-        enableEdgeToEdge()
+        try {
+            enableEdgeToEdge()
+        } catch (e: Exception) {
+            AppLog.w("enableEdgeToEdge failed on this device: ${e.message}")
+        }
         setContentView(R.layout.activity_main)
         applySafeAreaPadding()
 
         val appSettings = Settings(this)
         requestedOrientation = appSettings.screenOrientation.androidOrientation
-
-        // Sync UsbAttachedActivity component state with the listen for USB devices setting.
-        // This covers first install, app updates (manifest may reset component state),
-        // and ensures the USB system modal only appears when the user has opted in to listen for ALL USB devices.
-        lifecycleScope.launch(Dispatchers.IO) {
-            Settings.setUsbAttachedActivityEnabled(applicationContext, appSettings.listenForUsbDevices)
-        }
-
-        // Start main service immediately to handle connections and wireless server
-        val serviceIntent = Intent(this, AapService::class.java)
-        AapService.startInteractive(this, serviceIntent)
-
         setFullscreen()
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.main_content) as androidx.navigation.fragment.NavHostFragment
@@ -179,6 +167,26 @@ class MainActivity : BaseActivity() {
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         isRecreateReceiverRegistered = true
+
+        // Defer heavy initialization to after the window is drawn.
+        // This ensures the launcher activity is visible immediately after process restart,
+        // preventing Android from falling back to the stock launcher.
+        window.decorView.post {
+            if (redirectToBillingGateIfNeeded(skipPassedIntent = false)) {
+                return@post
+            }
+            logLaunchSource()
+            requestProjectionAutoLaunch("MainActivity.onCreate")
+
+            // Sync UsbAttachedActivity component state
+            lifecycleScope.launch(Dispatchers.IO) {
+                Settings.setUsbAttachedActivityEnabled(applicationContext, appSettings.listenForUsbDevices)
+            }
+
+            // Start main service to handle connections and wireless server
+            val serviceIntent = Intent(this, AapService::class.java)
+            AapService.startInteractive(this, serviceIntent)
+        }
 
         observeBillingAccess()
     }
@@ -227,6 +235,14 @@ class MainActivity : BaseActivity() {
 
     override fun onStop() {
         super.onStop()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE) {
+            AppLog.w("[CRASH_DEBUG] onTrimMemory level=$level - system is low on memory")
+            CrashReportStore.noteBreadcrumb(this, "MainActivity.onTrimMemory level=$level")
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -378,6 +394,10 @@ class MainActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        AppLog.i("[CRASH_DEBUG] MainActivity.onResume: connected=${App.provide(this).commManager.isConnected}, decoder.running=${App.provide(this).videoDecoder.isRunning}")
+        CrashReportStore.noteBreadcrumb(this, "MainActivity.onResume connected=${App.provide(this).commManager.isConnected} decoder=${App.provide(this).videoDecoder.isRunning}")
+        ProcessDeathWatchdog.noteActivityState("main-resumed connected=${App.provide(this).commManager.isConnected}")
 
         if (redirectToBillingGateIfNeeded(skipPassedIntent = true)) {
             return
