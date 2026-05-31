@@ -72,6 +72,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         manager?.requestConnectionInfo(channel, this@WifiDirectManager)
                     } else {
                         isConnected = false
+                        lastCredentialSignature = null // Reset so reconnection triggers credential delivery
                     }
                 }
             }

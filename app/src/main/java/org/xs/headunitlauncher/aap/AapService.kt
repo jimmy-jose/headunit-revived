@@ -626,8 +626,8 @@ class AapService : Service(), UsbReceiver.Listener {
         super.onCreate()
         killProcessOnDestroy = false
         isRunning = true
-        AppLog.i("AapService creating...")
-        CrashReportStore.noteBreadcrumb(this, "AapService.onCreate")
+        AppLog.i("AapService creating... (pid=${android.os.Process.myPid()}, uid=${android.os.Process.myUid()})")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onCreate pid=${android.os.Process.myPid()}")
         CrashReportStore.updateState(this, "aap_service", "creating")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -712,6 +712,10 @@ class AapService : Service(), UsbReceiver.Listener {
 
         checkAlreadyConnectedUsb()
         registerNetworkMonitor()
+
+        CrashReportStore.updateState(this, "aap_service", "running")
+        AppLog.i("AapService: onCreate completed successfully (pid=${android.os.Process.myPid()})")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onCreate complete")
 
         serviceScope.launch {
             while (isActive) {
@@ -1111,21 +1115,36 @@ class AapService : Service(), UsbReceiver.Listener {
                 CrashReportStore.noteBreadcrumb(this, "Reconnect skipped after user exit")
                 return
             }
-            AppLog.i("AapService: Disconnected. Restarting discovery loop in 2s...")
-            CrashReportStore.noteBreadcrumb(this, "Reconnect scheduled in 2s")
+            AppLog.i("AapService: Disconnected. Restarting discovery loop in 2s... (pid=${android.os.Process.myPid()}, wakeLock=${bootWakeLock?.isHeld == true})")
+            CrashReportStore.noteBreadcrumb(this, "Reconnect scheduled in 2s pid=${android.os.Process.myPid()}")
+            CrashReportStore.updateState(this, "reconnect_state", "scheduled_at=${System.currentTimeMillis()}")
+            // Acquire a short wake lock to prevent the system from killing the process
+            // during the reconnect delay on aggressive low-end devices (e.g. sp7731e).
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val reconnectWakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "HeadunitRevived::Reconnect"
+            ).apply { acquire(10_000L) } // 10s timeout
             serviceScope.launch {
-                delay(2000)
-                if (!commManager.isConnected) {
-                    if (settings.wifiConnectionMode == 2 && settings.helperConnectionStrategy == 2) {
-                        nearbyManager?.start()
-                    } else if (settings.wifiConnectionMode == 2 && settings.helperConnectionStrategy == 1) {
-                        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-                        if (wifiManager.isWifiEnabled) {
-                            wifiDirectManager?.makeVisible()
+                try {
+                    delay(2000)
+                    AppLog.i("AapService: Reconnect timer fired (pid=${android.os.Process.myPid()}, connected=${commManager.isConnected})")
+                    CrashReportStore.noteBreadcrumb(this@AapService, "Reconnect timer fired pid=${android.os.Process.myPid()}")
+                    CrashReportStore.updateState(this@AapService, "reconnect_state", "fired_at=${System.currentTimeMillis()}")
+                    if (!commManager.isConnected) {
+                        if (settings.wifiConnectionMode == 2 && settings.helperConnectionStrategy == 2) {
+                            nearbyManager?.start()
+                        } else if (settings.wifiConnectionMode == 2 && settings.helperConnectionStrategy == 1) {
+                            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                            if (wifiManager.isWifiEnabled) {
+                                wifiDirectManager?.makeVisible()
+                            }
+                        } else {
+                            startDiscovery()
                         }
-                    } else {
-                        startDiscovery()
                     }
+                } finally {
+                    if (reconnectWakeLock.isHeld) reconnectWakeLock.release()
                 }
             }
             return
@@ -1492,11 +1511,19 @@ class AapService : Service(), UsbReceiver.Listener {
             hasActiveSession = hasActiveSession
         )
         AppLog.i(
-            "AapService: onTaskRemoved — defaultHome=$defaultHome, state=${state::class.java.simpleName}, connected=${commManager.isConnected}, selfMode=$selfMode, isDestroying=$isDestroying, shouldRestart=$shouldRestart"
+            "AapService: onTaskRemoved — defaultHome=$defaultHome, state=${state::class.java.simpleName}, connected=${commManager.isConnected}, selfMode=$selfMode, isDestroying=$isDestroying, shouldRestart=$shouldRestart, pid=${android.os.Process.myPid()}, wirelessServer=${wirelessServer != null}"
         )
-        CrashReportStore.noteBreadcrumb(this, "AapService.onTaskRemoved restart=$shouldRestart defaultHome=$defaultHome active=$hasActiveSession connected=${commManager.isConnected}")
-        CrashReportStore.updateState(this, "aap_task_removed", "restart=$shouldRestart,defaultHome=$defaultHome,active=$hasActiveSession")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onTaskRemoved restart=$shouldRestart defaultHome=$defaultHome active=$hasActiveSession connected=${commManager.isConnected} pid=${android.os.Process.myPid()}")
+        CrashReportStore.updateState(this, "aap_task_removed", "restart=$shouldRestart,defaultHome=$defaultHome,active=$hasActiveSession,pid=${android.os.Process.myPid()}")
         if (!shouldRestart) {
+            if (!defaultHome) {
+                // Stop the service explicitly to prevent START_STICKY from causing the system
+                // to respawn us. On Android 8.1+ low-end devices, the respawned process often
+                // gets killed by the system before startForeground() completes, causing a crash loop.
+                CrashReportStore.markExpectedShutdown(this, "task-removed-no-restart")
+                stopForeground(true)
+                stopSelf()
+            }
             super.onTaskRemoved(rootIntent)
             return
         }
@@ -1511,9 +1538,21 @@ class AapService : Service(), UsbReceiver.Listener {
         super.onTaskRemoved(rootIntent)
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // Level 15 = TRIM_MEMORY_RUNNING_CRITICAL — system will kill background processes
+        // Level 5 = TRIM_MEMORY_RUNNING_LOW
+        // Level 10 = TRIM_MEMORY_RUNNING_MODERATE
+        if (level >= android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) {
+            AppLog.w("AapService: onTrimMemory level=$level (pid=${android.os.Process.myPid()}, connected=${commManager.isConnected}). System may kill us soon!")
+            CrashReportStore.noteBreadcrumb(this, "AapService.onTrimMemory level=$level connected=${commManager.isConnected}")
+        }
+    }
+
     override fun onDestroy() {
-        AppLog.i("AapService destroying... (wakeLock held=${bootWakeLock?.isHeld == true})")
-        CrashReportStore.noteBreadcrumb(this, "AapService.onDestroy connected=${commManager.isConnected} selfMode=$selfMode")
+        val uptimeMs = android.os.SystemClock.elapsedRealtime()
+        AppLog.i("AapService destroying... (pid=${android.os.Process.myPid()}, wakeLock held=${bootWakeLock?.isHeld == true}, elapsedMs=$uptimeMs, connected=${commManager.isConnected})")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onDestroy connected=${commManager.isConnected} selfMode=$selfMode pid=${android.os.Process.myPid()}")
         CrashReportStore.updateState(this, "aap_service", "destroying")
         isDestroying = true
         isRunning = false
@@ -1579,8 +1618,24 @@ class AapService : Service(), UsbReceiver.Listener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        CrashReportStore.noteBreadcrumb(this, "AapService.onStartCommand action=${intent?.action ?: "<default>"} startId=$startId")
+        CrashReportStore.noteBreadcrumb(this, "AapService.onStartCommand action=${intent?.action ?: "<default>"} startId=$startId flags=$flags")
         CrashReportStore.updateState(this, "aap_last_action", intent?.action ?: "<default>")
+
+        // Guard against system-initiated restarts (START_STICKY) when there is nothing to do.
+        // On low-end Android 8.x devices, the system kills the process shortly after restart
+        // if we can't justify running — this causes a crash loop.
+        if (intent == null && flags != 0 && !commManager.isConnected) {
+            AppLog.i("AapService: SYSTEM RESTART DETECTED — null intent, flags=$flags, pid=${android.os.Process.myPid()}. Not connected. Stopping to avoid crash loop.")
+            CrashReportStore.noteBreadcrumb(this, "AapService: system restart stopped (flags=$flags, not connected)")
+            stopForeground(true)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        if (intent == null) {
+            AppLog.i("AapService: SYSTEM RESTART — null intent, flags=$flags, pid=${android.os.Process.myPid()}, connected=${commManager.isConnected}. Allowing restart.")
+            CrashReportStore.noteBreadcrumb(this, "AapService: system restart allowed (flags=$flags, connected=${commManager.isConnected})")
+        }
+
         // Handle stop before re-posting the foreground notification to avoid a flash
         if (intent?.action == ACTION_STOP_SERVICE) {
             AppLog.i("Stop action received. Broadcasting finish request to activities.")
