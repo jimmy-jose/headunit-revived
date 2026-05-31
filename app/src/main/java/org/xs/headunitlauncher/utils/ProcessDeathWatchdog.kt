@@ -30,7 +30,7 @@ object ProcessDeathWatchdog {
     private const val KEY_LAST_DEATH_WALL = "last_death_wall"
 
     private const val HEARTBEAT_INTERVAL_MS = 5_000L // 5 seconds
-    private const val STATE_DUMP_INTERVAL_MS = 30_000L // 30 seconds
+    private const val STATE_DUMP_INTERVAL_MS = 60_000L // 60 seconds
 
     private var handlerThread: HandlerThread? = null
     private var handler: Handler? = null
@@ -261,6 +261,7 @@ object ProcessDeathWatchdog {
         }
     }
 }
+
 
 
 

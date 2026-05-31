@@ -55,8 +55,14 @@ class MainActivity : BaseActivity() {
     private val finishReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context, intent: Intent) {
             if (intent.action == "org.xs.headunitlauncher.ACTION_FINISH_ACTIVITIES") {
-                AppLog.i("MainActivity: Received finish request. Closing.")
-                finishAffinity()
+                AppLog.i("MainActivity: Received finish request.")
+                // When acting as the default home/launcher, never call finishAffinity()
+                // as it would briefly show the stock launcher. Just move to back.
+                if (LauncherUtils.isDefaultHomeApp(this@MainActivity)) {
+                    moveTaskToBack(true)
+                } else {
+                    finishAffinity()
+                }
             }
         }
     }
@@ -139,6 +145,9 @@ class MainActivity : BaseActivity() {
                 }
                 if (navController.navigateUp()) {
                     return
+                } else if (LauncherUtils.isDefaultHomeApp(this@MainActivity)) {
+                    // Launcher app: navigate back to home instead of finishing
+                    moveTaskToBack(true)
                 } else if (System.currentTimeMillis() - lastBackPressTime < 2000) {
                     finish()
                 } else {
@@ -193,9 +202,9 @@ class MainActivity : BaseActivity() {
 
     private fun applySafeAreaPadding() {
         val root = findViewById<View>(R.id.root) ?: return
-        val initialStart = root.paddingStart
+        val initialStart = root.paddingLeft
         val initialTop = root.paddingTop
-        val initialEnd = root.paddingEnd
+        val initialEnd = root.paddingRight
         val initialBottom = root.paddingBottom
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
@@ -297,7 +306,9 @@ class MainActivity : BaseActivity() {
                 this.action = AapService.ACTION_STOP_SERVICE
             }
             AapService.startInteractive(this, exitIntent)
-            finishAffinity()
+            if (!LauncherUtils.isDefaultHomeApp(this)) {
+                finishAffinity()
+            }
             return
         }
 
@@ -339,7 +350,9 @@ class MainActivity : BaseActivity() {
                     action = AapService.ACTION_STOP_SERVICE
                 }
                 AapService.startInteractive(this, exitIntent)
-                finishAffinity()
+                if (!LauncherUtils.isDefaultHomeApp(this)) {
+                    finishAffinity()
+                }
             }
         }
     }
@@ -444,8 +457,21 @@ class MainActivity : BaseActivity() {
 
         if (!appSettings.hasCompletedSetupWizard) {
             SetupWizard(this) {
-                // Refresh activity after setup
-                recreate()
+                // Refresh activity after setup — avoid recreate() on launcher
+                // to prevent memory pressure spikes on low-end devices
+                if (LauncherUtils.isDefaultHomeApp(this)) {
+                    // Just reload the current fragment
+                    val navHostFragment = supportFragmentManager.findFragmentById(R.id.main_content) as? NavHostFragment
+                    navHostFragment?.navController?.let { nav ->
+                        val id = nav.currentDestination?.id
+                        if (id != null) {
+                            nav.popBackStack(id, true)
+                            nav.navigate(id)
+                        }
+                    }
+                } else {
+                    recreate()
+                }
             }.start()
         }
 
@@ -460,11 +486,15 @@ class MainActivity : BaseActivity() {
         if (!skipPassedIntent && BillingGateActivity.wasGatePassed(intent)) return false
         if (accessManager.canUseAppCached()) return false
 
+        // When acting as the default launcher, don't finish() as it shows the stock launcher.
+        // Instead start the billing gate as an overlay activity without finishing ourselves.
         val forwardIntent = Intent(intent ?: Intent(this, MainActivity::class.java)).apply {
             setClass(this@MainActivity, MainActivity::class.java)
         }
         startActivity(BillingGateActivity.createIntent(this, forwardIntent))
-        finish()
+        if (!LauncherUtils.isDefaultHomeApp(this)) {
+            finish()
+        }
         return true
     }
 

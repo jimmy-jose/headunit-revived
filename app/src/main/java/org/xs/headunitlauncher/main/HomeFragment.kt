@@ -63,7 +63,7 @@ import java.util.Locale
 
 class HomeFragment : Fragment() {
 
-    private val commManager get() = App.provide(requireContext()).commManager
+    private val commManager get() = App.provide(requireContext().applicationContext).commManager
 
     private val vpnPermissionLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == android.app.Activity.RESULT_OK) {
@@ -1005,8 +1005,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun loadHomeApps() {
+        val ctx = context?.applicationContext ?: return
         viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            val apps = LauncherUtils.queryLaunchableApps(requireContext())
+            val apps = LauncherUtils.queryLaunchableApps(ctx)
             AppLog.i(
                 "HomeFragment: loadHomeApps found %d apps%s",
                 apps.size,
@@ -1056,9 +1057,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun applySystemInsets() {
-        val contentStart = appDrawerContent.paddingStart
+        val contentStart = appDrawerContent.paddingLeft
         val contentTop = appDrawerContent.paddingTop
-        val contentEnd = appDrawerContent.paddingEnd
+        val contentEnd = appDrawerContent.paddingRight
         val contentBottom = appDrawerContent.paddingBottom
         val recyclerBottom = homeAppsRecyclerView.paddingBottom
 

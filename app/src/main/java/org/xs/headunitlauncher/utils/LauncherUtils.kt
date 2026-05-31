@@ -124,7 +124,9 @@ object LauncherUtils {
             .filter { it.enabled }
             .mapNotNull { applicationInfo ->
                 packageManager.getLaunchIntentForPackage(applicationInfo.packageName)
-                    ?: packageManager.getLeanbackLaunchIntentForPackage(applicationInfo.packageName)
+                    ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        packageManager.getLeanbackLaunchIntentForPackage(applicationInfo.packageName)
+                    } else null
             }
             .mapNotNull { launchIntent ->
                 val componentName = launchIntent.component ?: return@mapNotNull null
@@ -200,7 +202,7 @@ object LauncherUtils {
             return
         } catch (_: Exception) {
             packageManager.getLaunchIntentForPackage(componentName.packageName)
-                ?: packageManager.getLeanbackLaunchIntentForPackage(componentName.packageName)
+                ?: (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) packageManager.getLeanbackLaunchIntentForPackage(componentName.packageName) else null)
                 ?: throw ActivityNotFoundException(componentName.flattenToShortString())
         }
 
@@ -312,7 +314,7 @@ object LauncherUtils {
                 canResolveActivity(packageManager, explicitIntent) ||
                     canResolveActivity(packageManager, leanbackIntent) ||
                     packageManager.getLaunchIntentForPackage(app.componentName.packageName)?.component == app.componentName ||
-                    packageManager.getLeanbackLaunchIntentForPackage(app.componentName.packageName)?.component == app.componentName
+                    (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && packageManager.getLeanbackLaunchIntentForPackage(app.componentName.packageName)?.component == app.componentName)
             }
             .toList()
     }
