@@ -267,7 +267,7 @@ object CrashReportStore {
             appendLine("PID: ${android.os.Process.myPid()}")
             appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
             appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
-            appendLine("ABIs: ${Build.SUPPORTED_ABIS.joinToString()}")
+            appendLine("ABIs: ${getSupportedAbis()}")
             appendLine("App uptime: ${formatDuration(SystemClock.elapsedRealtime() - App.appStartTime)}")
             appendLine()
             appendLine("Exception summary:")
@@ -321,7 +321,11 @@ object CrashReportStore {
             try {
                 val process = Runtime.getRuntime().exec(command)
                 val output = process.inputStream.bufferedReader().use { it.readText() }
-                process.waitFor(2, TimeUnit.SECONDS)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    process.waitFor(2, TimeUnit.SECONDS)
+                } else {
+                    process.waitFor()
+                }
                 if (output.isNotBlank()) {
                     return output
                 }
@@ -545,7 +549,11 @@ object CrashReportStore {
             readTimeout = 8_000
             doOutput = true
             setRequestProperty("Content-Type", "text/plain")
-            setFixedLengthStreamingMode(report.file.length())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                setFixedLengthStreamingMode(report.file.length())
+            } else {
+                setFixedLengthStreamingMode(report.file.length().toInt())
+            }
         }
 
         try {
@@ -641,7 +649,7 @@ object CrashReportStore {
             appendLine("Package: ${context.packageName}")
             appendLine("Android: ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})")
             appendLine("Device: ${Build.MANUFACTURER} ${Build.MODEL}")
-            appendLine("ABIs: ${Build.SUPPORTED_ABIS.joinToString()}")
+            appendLine("ABIs: ${getSupportedAbis()}")
             appendLine("App uptime: ${formatDuration(SystemClock.elapsedRealtime() - App.appStartTime)}")
             appendLine()
             appendLine("Exception summary:")
@@ -653,7 +661,7 @@ object CrashReportStore {
             appendLine("Notes:")
             appendLine("This usually means a native crash, watchdog kill, system restart, or another abrupt process death that bypassed the Java uncaught exception handler.")
             appendLine()
-i
+
             // Include watchdog death info
             val watchdogInfo = ProcessDeathWatchdog.getPreviousDeathInfo(context)
             if (watchdogInfo != null) {
@@ -805,5 +813,14 @@ i
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
         return String.format(Locale.US, "%02dh %02dm %02ds", hours, minutes, seconds)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun getSupportedAbis(): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            Build.SUPPORTED_ABIS.joinToString()
+        } else {
+            listOfNotNull(Build.CPU_ABI, Build.CPU_ABI2).joinToString()
+        }
     }
 }
