@@ -1,5 +1,6 @@
 package org.xs.headunitlauncher.connection
 
+import android.net.wifi.p2p.WifiP2pDevice
 import android.net.wifi.p2p.WifiP2pManager
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -17,7 +18,7 @@ object WifiDirectCompat {
     fun requestDeviceInfo(
         manager: WifiP2pManager?,
         channel: WifiP2pManager.Channel?,
-        onDeviceAvailable: (address: String) -> Unit
+        onDeviceAvailable: (WifiP2pDevice) -> Unit
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && manager != null && channel != null) {
             Api29Impl.requestDeviceInfo(manager, channel, onDeviceAvailable)
@@ -29,15 +30,11 @@ object WifiDirectCompat {
         fun requestDeviceInfo(
             manager: WifiP2pManager,
             channel: WifiP2pManager.Channel,
-            onDeviceAvailable: (address: String) -> Unit
+            onDeviceAvailable: (WifiP2pDevice) -> Unit
         ) {
             try {
                 manager.requestDeviceInfo(channel) { device ->
-                    device?.let {
-                        if (it.deviceAddress != "02:00:00:00:00:00" && it.deviceAddress != "00:00:00:00:00:00") {
-                            onDeviceAvailable(it.deviceAddress)
-                        }
-                    }
+                    device?.let(onDeviceAvailable)
                 }
             } catch (e: Exception) {
                 AppLog.w("WifiDirectCompat: requestDeviceInfo failed: ${e.message}")

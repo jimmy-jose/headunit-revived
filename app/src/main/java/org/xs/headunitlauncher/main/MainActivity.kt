@@ -382,6 +382,10 @@ class MainActivity : BaseActivity() {
             requiredPermissions.add(Manifest.permission.POST_NOTIFICATIONS)
         }
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+            requiredPermissions.add(Manifest.permission.ACCESS_LOCAL_NETWORK)
+        }
+
         // Filter out permissions that are already granted
         val permissionsToRequest = requiredPermissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED

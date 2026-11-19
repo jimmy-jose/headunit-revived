@@ -82,14 +82,22 @@ class SocketAccessoryConnection(private val ip: String, private val port: Int, p
         try {
             if (!transport.isConnected) {
                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                val destination = InetSocketAddress(ip, port)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                   val net = cm.activeNetwork
+                    val peerNetwork = destination.address?.let { address ->
+                        cm.allNetworks.firstOrNull { network ->
+                            val link = cm.getLinkProperties(network)
+                            link?.interfaceName?.startsWith("p2p") == true &&
+                                link.routes.any { it.destination.prefixLength > 0 && it.destination.contains(address) }
+                        }
+                    }
+                    val net = peerNetwork ?: cm.activeNetwork
 
                     if (net != null) {
                         try {
                             net.bindSocket(transport)
-                            AppLog.i("Bound socket to active network: $net")
+                            AppLog.i("Bound socket to ${if (peerNetwork != null) "Wi-Fi Direct" else "active"} network: $net")
                         } catch (e: Exception) {
                             AppLog.w("Failed to bind socket to network", e)
                         }
@@ -118,7 +126,7 @@ class SocketAccessoryConnection(private val ip: String, private val port: Int, p
                 
                 // Chinese Headunit Mediatek Correction
                 try {
-                    transport.connect(InetSocketAddress(ip, port), 5000)
+                    transport.connect(destination, 5000)
                 } catch (e: Throwable) {
                     val errorMessage = e.message ?: e.toString()
                     if (errorMessage.contains("com.mediatek.cta.CtaHttp") || errorMessage.contains("CtaHttp")) {

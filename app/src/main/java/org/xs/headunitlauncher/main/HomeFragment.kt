@@ -54,7 +54,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.isActive
 import kotlin.math.roundToInt
 import org.xs.headunitlauncher.utils.LauncherUtils
-import org.xs.headunitlauncher.utils.CrashReportStore
 import org.xs.headunitlauncher.utils.Settings
 import org.xs.headunitlauncher.utils.VpnControl
 import java.text.SimpleDateFormat
@@ -90,10 +89,6 @@ class HomeFragment : Fragment() {
     private lateinit var wifi: Button
     private lateinit var connectionInfoButton: ImageButton
     private lateinit var wifi_text_view: TextView
-    private var crashReportContainer: View? = null
-    private var crashReportText: TextView? = null
-    private var crashReportShareButton: Button? = null
-    private var crashReportClearButton: Button? = null
     private var trialBannerContainer: View? = null
     private var trialBannerText: TextView? = null
     private var helperTransferContainer: View? = null
@@ -150,10 +145,6 @@ class HomeFragment : Fragment() {
         wifi = view.findViewById(R.id.wifi_button)
         connectionInfoButton = view.findViewById(R.id.connection_info_button)
         wifi_text_view = view.findViewById(R.id.wifi_text)
-        crashReportContainer = view.findViewById(R.id.crash_report_container)
-        crashReportText = view.findViewById(R.id.crash_report_text)
-        crashReportShareButton = view.findViewById(R.id.crash_report_share_button)
-        crashReportClearButton = view.findViewById(R.id.crash_report_clear_button)
         trialBannerContainer = view.findViewById(R.id.trial_banner_container)
         trialBannerText = view.findViewById(R.id.trial_banner_text)
         helperTransferContainer = view.findViewById(R.id.helper_transfer_container)
@@ -221,7 +212,6 @@ class HomeFragment : Fragment() {
         updateSelfModeAvailability()
         updateProjectionButtonText()
         updateLauncherUi()
-        updateCrashReportBanner()
         updateTrialBanner()
         updateHelperTransferBanner()
         updateNativeWirelessWarning()
@@ -495,20 +485,6 @@ class HomeFragment : Fragment() {
             showConnectionInfoDialog()
         }
 
-        crashReportShareButton?.setOnClickListener {
-            val shared = CrashReportStore.sharePendingReport(requireContext())
-            if (!shared) {
-                Toast.makeText(requireContext(), R.string.crash_report_missing, Toast.LENGTH_SHORT).show()
-                updateCrashReportBanner()
-            }
-        }
-
-        crashReportClearButton?.setOnClickListener {
-            CrashReportStore.ignorePendingReport(requireContext())
-            updateCrashReportBanner()
-            Toast.makeText(requireContext(), R.string.crash_report_cleared, Toast.LENGTH_SHORT).show()
-        }
-
         appDrawerHandle.setOnClickListener {
             toggleAppDrawer()
         }
@@ -595,7 +571,6 @@ class HomeFragment : Fragment() {
         AppLog.i("HomeFragment: onResume. isConnected=${commManager.isConnected}")
         updateProjectionButtonText()
         updateLauncherUi()
-        updateCrashReportBanner()
         updateTrialBanner()
         updateHelperTransferBanner()
         loadHomeApps()
@@ -621,20 +596,6 @@ class HomeFragment : Fragment() {
             !appSettings.hideNativeWirelessWarning
         nativeWirelessWarningContainer?.visibility = if (shouldShow) View.VISIBLE else View.GONE
         nativeWirelessWarningText?.text = getString(R.string.native_wireless_home_warning)
-    }
-
-    private fun updateCrashReportBanner() {
-        val report = CrashReportStore.getPendingReport(requireContext())
-        crashReportContainer?.visibility = if (report == null) View.GONE else View.VISIBLE
-        crashReportText?.text = if (report == null) {
-            ""
-        } else {
-            getString(
-                R.string.crash_report_ready_message,
-                CrashReportStore.formatTimestamp(report.capturedAtMillis),
-                report.summary
-            )
-        }
     }
 
     private fun updateTrialBanner() {

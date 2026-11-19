@@ -41,8 +41,8 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         override fun run() {
             if (!isConnected) {
                 startDiscovery()
-                handler.postDelayed(this, 10000L) // Repeat every 10s to stay visible
             }
+            handler.postDelayed(this, 10000L)
         }
     }
 
@@ -57,13 +57,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                         @Suppress("DEPRECATION")
                         intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE)
                     }
-                    device?.let {
-                        if (org.xs.headunitlauncher.App.provide(context).settings.wifiConnectionMode != 3) {
-                            AppLog.i("WifiDirectManager: Local name: ${it.deviceName}, Address: ${it.deviceAddress}")
-                        }
-                        AapService.wifiDirectName.value = it.deviceName
-                        localDeviceAddress = it.deviceAddress
-                    }
+                    device?.let(::updateLocalDevice)
                 }
                 WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION -> {
                     val networkInfo = intent.getParcelableExtra<NetworkInfo>(WifiP2pManager.EXTRA_NETWORK_INFO)
@@ -85,10 +79,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
                 manager?.let { mgr ->
                     channel = mgr.initialize(context, context.mainLooper, null)
                     
-                    WifiDirectCompat.requestDeviceInfo(manager, channel) { address ->
-                        AppLog.i("WifiDirectManager: requestDeviceInfo success: $address")
-                        localDeviceAddress = address
-                    }
+                    WifiDirectCompat.requestDeviceInfo(mgr, channel, ::updateLocalDevice)
 
                     val filter = IntentFilter().apply {
                         addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION)
@@ -102,16 +93,20 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         }
     }
 
+    private fun updateLocalDevice(device: WifiP2pDevice) {
+        AapService.wifiDirectName.value = device.deviceName?.takeIf { it.isNotBlank() }
+        if (isUsableMac(device.deviceAddress)) {
+            localDeviceAddress = device.deviceAddress
+        }
+    }
+
     @SuppressLint("MissingPermission")
     override fun onConnectionInfoAvailable(info: WifiP2pInfo) {
         if (info.groupFormed) {
-            isConnected = true
             isGroupOwner = info.isGroupOwner
+            if (!isGroupOwner) isConnected = true
             
-            WifiDirectCompat.requestDeviceInfo(manager, channel) { address ->
-                AppLog.d("WifiDirectManager: Updated localDeviceAddress: $address")
-                localDeviceAddress = address
-            }
+            WifiDirectCompat.requestDeviceInfo(manager, channel, ::updateLocalDevice)
 
             val goIp = info.groupOwnerAddress?.hostAddress ?: "unknown"
             AppLog.i("WifiDirectManager: Group formed. Owner: $isGroupOwner, GO IP: $goIp")
@@ -148,6 +143,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             val psk = group.passphrase ?: ""
             var bssid = getWifiDirectMac(group.`interface`)
             val isOwner = group.isGroupOwner
+            if (isOwner) isConnected = group.clientList.isNotEmpty()
 
             // [FIX] Robust BSSID detection for masked MACs (00:00 or 02:00)
             if (!isUsableMac(bssid)) {
@@ -339,10 +335,9 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
     }
 
     @SuppressLint("MissingPermission")
-    fun makeVisible() {
+    fun makeVisible(reuseGroup: Boolean = false) {
         val mgr = manager ?: return
         val ch = channel ?: return
-        val helperDeviceName = "HUL"
 
         // Ensure WiFi is enabled (Required for P2P)
         val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
@@ -352,21 +347,16 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
             return
         }
 
-        // Publish the helper-side Wi-Fi Direct name immediately so the UI can show it
-        // even before Android delivers a later THIS_DEVICE_CHANGED callback.
-        AapService.wifiDirectName.value = helperDeviceName
-
-        // Reflection Hack to set name
-        try {
-            val method = mgr.javaClass.getMethod("setDeviceName", WifiP2pManager.Channel::class.java, String::class.java, WifiP2pManager.ActionListener::class.java)
-            method.invoke(mgr, ch, helperDeviceName, object : WifiP2pManager.ActionListener {
-                override fun onSuccess() {
-                    AppLog.i("WifiDirectManager: Name set to $helperDeviceName")
-                    AapService.wifiDirectName.value = helperDeviceName
+        if (reuseGroup) {
+            mgr.requestGroupInfo(ch) { group ->
+                if (group?.isGroupOwner == true) {
+                    startDiscoveryLoop()
+                } else {
+                    makeVisible()
                 }
-                override fun onFailure(reason: Int) {}
-            })
-        } catch (e: Exception) {}
+            }
+            return
+        }
 
         // 1. Stop any ongoing discovery and remove group to start fresh
         mgr.stopPeerDiscovery(ch, object : WifiP2pManager.ActionListener {
@@ -395,6 +385,7 @@ class WifiDirectManager(private val context: Context) : WifiP2pManager.Connectio
         mgr.createGroup(ch, object : WifiP2pManager.ActionListener {
             override fun onSuccess() {
                 AppLog.i("WifiDirectManager: P2P Group created.")
+                WifiDirectCompat.requestDeviceInfo(mgr, ch, ::updateLocalDevice)
                 isGroupOwner = true
                 startDiscoveryLoop()
             }

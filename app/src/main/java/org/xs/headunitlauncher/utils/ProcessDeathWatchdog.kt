@@ -160,8 +160,7 @@ object ProcessDeathWatchdog {
     }
 
     /**
-     * Creates a crash report via CrashReportStore so the user sees the share banner
-     * on the home screen. This is called when the watchdog detects a death that
+     * Creates a crash report when the watchdog detects a death that
      * CrashReportStore's own detection missed (e.g., process killed while no
      * foreground activity session was active).
      */

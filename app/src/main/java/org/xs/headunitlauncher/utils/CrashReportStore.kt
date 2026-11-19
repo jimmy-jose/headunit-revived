@@ -16,7 +16,6 @@ import android.os.SystemClock
 import android.provider.MediaStore
 import org.xs.headunitlauncher.App
 import org.xs.headunitlauncher.BuildConfig
-import org.xs.headunitlauncher.R
 import java.io.File
 import java.io.OutputStreamWriter
 import java.io.PrintWriter
@@ -122,22 +121,6 @@ object CrashReportStore {
             capturedAtMillis = prefs.getLong(KEY_PENDING_CRASH_TIME, file.lastModified()),
             summary = prefs.getString(KEY_PENDING_CRASH_SUMMARY, file.name).orEmpty()
         )
-    }
-
-    fun sharePendingReport(context: Context): Boolean {
-        val report = getPendingReport(context) ?: return false
-        LogExporter.shareLogFile(
-            context = context,
-            file = report.file,
-            chooserTitle = context.getString(R.string.share_crash_report)
-        )
-        return true
-    }
-
-    fun ignorePendingReport(context: Context) {
-        val report = getPendingReport(context)
-        report?.file?.delete()
-        clearPendingReport(context)
     }
 
     /**

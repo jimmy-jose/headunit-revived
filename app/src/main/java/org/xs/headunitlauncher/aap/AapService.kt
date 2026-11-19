@@ -1137,7 +1137,8 @@ class AapService : Service(), UsbReceiver.Listener {
                         } else if (settings.wifiConnectionMode == 2 && settings.helperConnectionStrategy == 1) {
                             val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
                             if (wifiManager.isWifiEnabled) {
-                                wifiDirectManager?.makeVisible()
+                                // The projection socket can close while the phone still needs the same Wi-Fi Direct link.
+                                wifiDirectManager?.makeVisible(reuseGroup = true)
                             }
                         } else {
                             startDiscovery()

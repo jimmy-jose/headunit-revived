@@ -815,6 +815,11 @@ class MainActivity : AppCompatActivity() {
             permissions.add(Manifest.permission.POST_NOTIFICATIONS)
             permissions.add(Manifest.permission.NEARBY_WIFI_DEVICES)
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+            getSharedPreferences("WirelessHelperPrefs", Context.MODE_PRIVATE).getInt("connection_mode", MODE_NSD) != MODE_NEARBY
+        ) {
+            permissions.add(Manifest.permission.ACCESS_LOCAL_NETWORK)
+        }
         if (Build.VERSION.SDK_INT >= 31) {
             permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
             permissions.add(Manifest.permission.BLUETOOTH_ADVERTISE)
