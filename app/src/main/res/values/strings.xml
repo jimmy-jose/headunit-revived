@@ -70,6 +70,7 @@
     <string name="reconnection_required_title">Reconnection Required</string>
     <string name="reconnection_required_message">The device is in a waiting state. Please unplug and re-plug the USB cable to start Android Auto again.</string>
 
+    <string name="bluetooth">Bluetooth</string>
     <string name="bluetooth_address_s">Bluetooth address</string>
     <string name="enter_bluetooth_mac">Enter bluetooth MAC</string>
     <string name="reset">Reset</string>

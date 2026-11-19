@@ -391,10 +391,13 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp">
 
+            <include layout="@layout/launcher_bluetooth_button" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/exit_button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:text="@string/exit"
                 android:textColor="@android:color/white"
                 app:backgroundTint="@color/material_grey_700"

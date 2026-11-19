@@ -1,5 +1,6 @@
 package org.xs.headunitlauncher.main
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.hardware.usb.UsbManager
@@ -479,6 +480,14 @@ class HomeFragment : Fragment() {
         settings.setOnClickListener {
             val intent = Intent(requireContext(), SettingsActivity::class.java)
             startActivity(intent)
+        }
+
+        requireView().findViewById<Button>(R.id.bluetooth_button).setOnClickListener {
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS))
+            } catch (_: ActivityNotFoundException) {
+                Toast.makeText(requireContext(), R.string.failed_open_app, Toast.LENGTH_SHORT).show()
+            }
         }
 
         connectionInfoButton.setOnClickListener {
